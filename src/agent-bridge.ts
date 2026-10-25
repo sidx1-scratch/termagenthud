@@ -212,16 +212,10 @@ export class AgentSessionBridge extends EventEmitter {
   }
 
   public writeInput(input: string) {
-    if (!this.isRunning()) {
-      // Auto-launch the agent with the provided task
-      this.startAgent(this.activeAgent.binaries[0], [input]);
-      return;
-    }
-
     // Codex's full-screen interactive TUI cannot be faithfully rendered by a
     // browser stream. Run each transmitted prompt through the supported
-    // non-interactive command mode so the model response is plain readable PTY
-    // output and every prompt is actually submitted.
+    // non-interactive command mode so every prompt is submitted, including
+    // after the previous exec process has exited.
     if (this.activeAgent.id === 'codex') {
       this.startAgent('codex', [
         'exec',
@@ -229,6 +223,12 @@ export class AgentSessionBridge extends EventEmitter {
         '--skip-git-repo-check',
         input,
       ], this.workingDir);
+      return;
+    }
+
+    if (!this.isRunning()) {
+      // Auto-launch the agent with the provided task
+      this.startAgent(this.activeAgent.binaries[0], [input]);
       return;
     }
 
