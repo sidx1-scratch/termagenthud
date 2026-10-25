@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.venv/
+models/
+*.wav
+*.mp3
+.DS_Store

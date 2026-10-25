@@ -1,0 +1,42 @@
+{
+  "name": "termagenthud",
+  "version": "1.0.0",
+  "description": "JARVIS / Tactical Fighter Jet HUD with Voice STT/TTS (Whisper Tiny + Piper) & MCP Server for Terminal AI Agents",
+  "main": "dist/index.js",
+  "bin": {
+    "termagenthud": "./bin/termagenthud.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node dist/index.js",
+    "hud": "node dist/index.js",
+    "mcp": "node dist/mcp-server.js",
+    "test": "node dist/test.js",
+    "setup-models": "node dist/setup.js"
+  },
+  "keywords": [
+    "mcp",
+    "terminal-hud",
+    "ai-agent",
+    "jarvis",
+    "voice-control",
+    "whisper",
+    "piper-tts"
+  ],
+  "author": "sidx1",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "blessed": "^0.1.81",
+    "chalk": "^5.3.0",
+    "dotenv": "^16.4.7",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/blessed": "^0.1.25",
+    "@types/node": "^22.10.1",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.2"
+  }
+}
