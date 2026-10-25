@@ -68,6 +68,9 @@ export class AgentSessionBridge extends EventEmitter {
   private workingDir: string = process.cwd();
   private activeAgent: SupportedAgent = KNOWN_AGENTS[0];
   private currentPid: number | undefined;
+  private agentReady = false;
+  private pendingInputs: string[] = [];
+  private readyTimer: NodeJS.Timeout | null = null;
 
   constructor(workingDir?: string) {
     super();
@@ -135,6 +138,9 @@ export class AgentSessionBridge extends EventEmitter {
     }
 
     const runDir = cwd || this.workingDir || process.cwd();
+    this.agentReady = false;
+    this.pendingInputs = [];
+    if (this.readyTimer) clearTimeout(this.readyTimer);
     let targetBin = command || this.activeAgent.binaries[0];
 
     // Resolve full path if available
@@ -169,9 +175,17 @@ export class AgentSessionBridge extends EventEmitter {
           if (parsed.type === 'started') {
             this.currentPid = parsed.pid;
             this.emit('started', { command: parsed.command, pid: parsed.pid, agent: this.activeAgent });
+            // Give interactive agents time to finish drawing their prompt before
+            // replaying text entered during startup.
+            this.readyTimer = setTimeout(() => {
+              this.agentReady = true;
+              const queued = this.pendingInputs.splice(0);
+              for (const input of queued) this.writePtyAction({ action: 'write', data: input + '\n' });
+            }, 1500);
           } else if (parsed.type === 'output') {
             this.handleOutput(parsed.data);
           } else if (parsed.type === 'exit') {
+            this.agentReady = false;
             this.emit('exit', parsed.code);
             this.ptyProcess = null;
           }
@@ -201,6 +215,11 @@ export class AgentSessionBridge extends EventEmitter {
     if (!this.isRunning()) {
       // Auto-launch the agent with the provided task
       this.startAgent(this.activeAgent.binaries[0], [input]);
+      return;
+    }
+
+    if (!this.agentReady) {
+      this.pendingInputs.push(input.trim());
       return;
     }
 
@@ -273,5 +292,8 @@ export class AgentSessionBridge extends EventEmitter {
       this.ptyProcess.kill();
       this.ptyProcess = null;
     }
+    this.agentReady = false;
+    this.pendingInputs = [];
+    if (this.readyTimer) clearTimeout(this.readyTimer);
   }
 }

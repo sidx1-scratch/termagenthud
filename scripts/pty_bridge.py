@@ -9,6 +9,9 @@ import sys
 import select
 import json
 import signal
+import struct
+import termios
+import fcntl
 
 def emit(msg_type, **kwargs):
     kwargs["type"] = msg_type
@@ -22,6 +25,11 @@ def main():
 
     cmd = sys.argv[1:]
     master_fd, slave_fd = pty.openpty()
+    # Interactive agents use terminal dimensions to decide whether and how to
+    # draw their prompt. A zero-sized PTY can leave Codex in control-code-only
+    # mode and make transmitted input appear to disappear.
+    winsize = struct.pack("HHHH", 40, 120, 0, 0)
+    fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
 
     pid = os.fork()
     if pid == 0:
@@ -51,7 +59,6 @@ def main():
     stdin_fd = sys.stdin.fileno()
 
     # Set non-blocking on master_fd
-    import fcntl
     fl = fcntl.fcntl(master_fd, fcntl.F_GETFL)
     fcntl.fcntl(master_fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
@@ -86,7 +93,6 @@ def main():
                 elif action == "resize":
                     cols = payload.get("cols", 80)
                     rows = payload.get("rows", 24)
-                    import struct, termios
                     winsize = struct.pack("HHHH", rows, cols, 0, 0)
                     fcntl.ioctl(master_fd, termios.TIOCSWINSZ, winsize)
                 elif action == "kill":
