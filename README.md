@@ -8,36 +8,35 @@ Featuring **Zero-Dependency Native WebSocket & HTTP servers**, **Open-Source Voi
 
 ---
 
-## ⚡ 1-Step Fully Automatic Installation
+## ⚡ 1-Line Universal Install (Zero Setup Needed)
 
-Run the automatic installer (use `sudo` so `npm link` can install the `termagenthud` command globally across your system):
+Anyone can install the full JARVIS Tactical HUD with **a single command**. You don't even need to clone the repository manually—the bootstrap script does everything:
 
 ```bash
-# Clone the repository
-git clone https://github.com/sidx1-scratch/termagenthud.git
-cd termagenthud
-
-# Run fully automatic setup (with sudo for npm link global install)
-sudo ./scripts/install.sh
+curl -sSL https://raw.githubusercontent.com/sidx1-scratch/termagenthud/main/install.sh | sudo bash
 ```
 
-### What the Automatic Installer Does:
-1. **Compiles TypeScript core** into high-performance JS.
-2. **Runs `npm link`** to provide the global `termagenthud` command.
-3. **Sets up an isolated Python virtual environment** (`.venv`).
-4. **Downloads Whisper Tiny (INT8 Quantized)** for instant, low-latency Speech-to-Text with negligible memory usage (~140MB).
-5. **Downloads Piper Voice Engine & the best default voice** (`en_US-lessac-low`, ~28MB) for natural JARVIS vocal synthesis.
+### What the 1-Line Script Automatically Does:
+1. Detects your OS and ensures system audio/build tools are installed.
+2. Clones the latest TermAgentHUD engine into `~/.local/share/termagenthud`.
+3. Prompts you to pick your default terminal AI agent (**Antigravity, Claude Code, OpenCode, OpenClaw, Codex, Cursor**).
+4. **Auto-injects the MCP server** into your chosen agent's configuration file.
+5. Pre-downloads **Whisper Tiny INT8** and **Piper Lessac ONNX** models (~140MB RAM).
+6. Links `termagenthud` into `/usr/local/bin` and `~/.local/bin` so you can run it from **any folder**.
 
 ---
 
-## 🚀 Running the HUD
+## 🚀 Running TermAgentHUD
 
-Simply open any terminal and execute:
+Open any terminal in any directory and run:
 ```bash
 termagenthud
 ```
-- The HUD automatically starts the background engine and opens **`http://localhost:3000`** in your default web browser.
-- You can keep your terminal minimized or running in the background.
+
+- **Runs in the background** and immediately returns your terminal prompt (`$` free to use).
+- **Pops open the Cybernetic HUD** in your default browser at `http://localhost:3000`.
+- **Starts Whisper Tiny STT + Piper TTS** with wake words *"Jarvis"*, *"Computer"*, or *"Agent"*.
+- **Launches your agent** (`agy`, `claude`, etc.) in an interactive real pseudo-terminal (PTY).
 
 To run directly inside the terminal as an ASCII TUI:
 ```bash
