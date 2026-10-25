@@ -39,3 +39,5 @@ assert.strictEqual(typeof runMcpServer, 'function');
 console.log('  ✔ MCP Server exports correctly.');
 
 console.log('\n>>> ALL 2/2 TEST SUITES PASSED CLEANLY! <<<');
+process.exit(0);
+

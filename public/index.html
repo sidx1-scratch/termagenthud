@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS // FIGHTER-JET TACTICAL HUD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hud-overlay"></div>
+  <div class="scanlines"></div>
+
+  <!-- Top Tactical Nav Header -->
+  <header class="hud-header">
+    <div class="header-left">
+      <div class="status-indicator"></div>
+      <span class="hud-title">JARVIS TACTICAL FIGHTER-JET HUD</span>
+      <span class="hud-sub">SYS // COMBAT READY</span>
+    </div>
+    <div class="header-center">
+      <span class="tag">TARGET: ANTIGRAVITY CLI</span>
+      <span class="tag mcp">MCP: CONNECTED</span>
+      <span class="tag voice" id="voice-tag">VOICE: WHISPER-TINY (OFFLINE/READY)</span>
+    </div>
+    <div class="header-right">
+      <span id="clock" class="clock">00:00:00</span>
+      <button id="btn-listen" class="hud-btn glow-cyan">MIC ACTIVE</button>
+    </div>
+  </header>
+
+  <!-- Main Flight Deck UI Grid -->
+  <main class="hud-grid">
+    <!-- Left Tactical Column: Radar & Flight Horizon -->
+    <section class="card radar-col">
+      <div class="card-header">
+        <span class="card-title">360° TACTICAL RADAR</span>
+        <span class="badge">SWEEP 60Hz</span>
+      </div>
+      <div class="radar-wrapper">
+        <canvas id="radar-canvas" width="280" height="280"></canvas>
+        <div class="radar-crosshair"></div>
+      </div>
+      <div class="horizon-wrapper">
+        <div class="card-header">
+          <span class="card-title">ARTIFICIAL HORIZON & PITCH</span>
+        </div>
+        <div class="pitch-ladder">
+          <div class="ladder-line deg-10">+10 ───┬─── +10</div>
+          <div class="ladder-line deg-0">000 ───┼─── 000</div>
+          <div class="ladder-line deg-neg-10">-10 ───┴─── -10</div>
+          <div class="jet-reticle"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center Column: Visualizer, Live Comms, and Critical Voice Approval Bay -->
+    <section class="card center-col">
+      <!-- Target Command Approval Banner -->
+      <div id="approval-bay" class="approval-bay waiting">
+        <div class="approval-header">
+          <span class="warning-flash">⚡ TACTICAL AUTHORIZATION BAY</span>
+          <span id="approval-timer" class="timer-badge">STANDBY</span>
+        </div>
+        <div class="approval-content">
+          <div id="approval-msg" class="approval-text">Waiting for Antigravity CLI commands or tool operations...</div>
+          <div id="approval-cmd" class="approval-cmd-preview">NO PENDING COMMAND</div>
+        </div>
+        <div class="approval-actions">
+          <button id="btn-approve" class="hud-btn approve">APPROVE [Y]</button>
+          <button id="btn-reject" class="hud-btn reject">REJECT [N]</button>
+          <span class="voice-hint">Or speak aloud: <em>"Jarvis, approve"</em> / <em>"Computer, reject"</em></span>
+        </div>
+      </div>
+
+      <!-- Agent Activity Stream & Terminal Output -->
+      <div class="card-header">
+        <span class="card-title">TACTICAL ACTIVITY & COMMS STREAM</span>
+        <span class="badge blue">LIVE FEED</span>
+      </div>
+      <div id="comms-stream" class="terminal-stream">
+        <div class="log-line sys">[SYSTEM] JARVIS Tactical Fighter-Jet HUD initialized.</div>
+        <div class="log-line sys">[AGENT] Antigravity CLI controller linked via MCP stdio/ws bridge.</div>
+        <div class="log-line voice">[VOICE] Wake words armed: "Jarvis", "Computer", "Agent".</div>
+      </div>
+
+      <!-- Audio Frequency Waveform Visualizer -->
+      <div class="waveform-container">
+        <canvas id="waveform-canvas" width="600" height="60"></canvas>
+      </div>
+
+      <!-- Quick Command Input -->
+      <div class="quick-input-bar">
+        <input type="text" id="manual-cmd" placeholder="Transmit direct tactical instruction to Antigravity CLI..." />
+        <button id="btn-send" class="hud-btn glow-cyan">TRANSMIT</button>
+      </div>
+    </section>
+
+    <!-- Right Column: Flight Telemetry & Agent System Diagnostics -->
+    <section class="card telemetry-col">
+      <div class="card-header">
+        <span class="card-title">FLIGHT & AGENT TELEMETRY</span>
+        <span class="badge">MACH 2.1</span>
+      </div>
+      <div class="telemetry-items">
+        <div class="tele-item">
+          <span class="label">AGENT STATUS</span>
+          <span class="val cyan" id="tele-status">COMBAT ENGAGED</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">AIRSPEED</span>
+          <span class="val">MACH 2.14</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">ALTITUDE</span>
+          <span class="val">36,000 FT</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">THROTTLE</span>
+          <span class="val">98% AFTERBURN</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">ACTIVE TOOL</span>
+          <span class="val yellow" id="tele-tool">IDLE / READY</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">STT INFERENCE</span>
+          <span class="val green">WHISPER TINY (INT8)</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">TTS SYNTHESIS</span>
+          <span class="val green">PIPER ONNX LESSAC</span>
+        </div>
+        <div class="tele-item">
+          <span class="label">RAM CONSUMPTION</span>
+          <span class="val cyan">~148 MB</span>
+        </div>
+      </div>
+
+      <!-- Tactical Quick Action Controls -->
+      <div class="card-header quick-header">
+        <span class="card-title">TACTICAL SIMULATION</span>
+      </div>
+      <div class="quick-controls">
+        <button id="btn-sim-approval" class="hud-btn secondary">Simulate Approval Request</button>
+        <button id="btn-sim-voice" class="hud-btn secondary">Test Piper Voice Synthesis</button>
+        <button id="btn-clear" class="hud-btn secondary">Clear Activity Stream</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
