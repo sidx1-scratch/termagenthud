@@ -180,7 +180,7 @@ export class AgentSessionBridge extends EventEmitter {
             this.readyTimer = setTimeout(() => {
               this.agentReady = true;
               const queued = this.pendingInputs.splice(0);
-              for (const input of queued) this.writePtyAction({ action: 'write', data: input + '\n' });
+              for (const input of queued) this.writePtyAction({ action: 'write', data: input + '\r' });
             }, 1500);
           } else if (parsed.type === 'output') {
             this.handleOutput(parsed.data);
@@ -218,18 +218,34 @@ export class AgentSessionBridge extends EventEmitter {
       return;
     }
 
+    // Codex's full-screen interactive TUI cannot be faithfully rendered by a
+    // browser stream. Run each transmitted prompt through the supported
+    // non-interactive command mode so the model response is plain readable PTY
+    // output and every prompt is actually submitted.
+    if (this.activeAgent.id === 'codex') {
+      this.startAgent('codex', [
+        'exec',
+        '--sandbox', 'workspace-write',
+        '--skip-git-repo-check',
+        input,
+      ], this.workingDir);
+      return;
+    }
+
     if (!this.agentReady) {
       this.pendingInputs.push(input.trim());
       return;
     }
 
-    const cleanInput = input.endsWith('\n') ? input : input + '\n';
+    // A PTY receives Enter as carriage return. LF is echoed by some TUI
+    // line editors but does not submit the composed prompt.
+    const cleanInput = input.endsWith('\r') ? input : input + '\r';
     this.writePtyAction({ action: 'write', data: cleanInput });
   }
 
   public sendApproval(approved: boolean) {
     if (!this.isRunning()) return;
-    const key = approved ? 'y\n' : 'n\n';
+    const key = approved ? 'y\r' : 'n\r';
     this.writePtyAction({ action: 'write', data: key });
   }
 
