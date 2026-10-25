@@ -104,6 +104,16 @@ def main():
         # Check if child is still alive
         ret = os.waitpid(pid, os.WNOHANG)
         if ret != (0, 0):
+            # A short-lived command such as `codex exec` can exit with its
+            # answer still buffered in the PTY. Drain it before reporting exit.
+            while True:
+                try:
+                    data = os.read(master_fd, 4096)
+                    if not data:
+                        break
+                    emit("output", data=data.decode("utf-8", errors="replace"))
+                except OSError:
+                    break
             emit("exit", code=ret[1])
             break
 
