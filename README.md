@@ -1,8 +1,8 @@
-# 🚀 TermAgentHUD (JARVIS Tactical Fighter-Jet HUD)
+# 🚀 TermAgentHUD (JARVIS Tactical AI Control HUD)
 
-A high-tech, tactical fighter-jet and JARVIS-inspired Terminal HUD for any Terminal AI Agent (such as **Google Antigravity CLI**, **OpenAI Codex CLI**, **Claude Code**, or custom agents). 
+A high-tech, tactical, JARVIS-inspired control surface for terminal AI agents such as **Google Antigravity CLI**, **OpenAI Codex CLI**, **Claude Code**, and custom agent runtimes.
 
-Featuring **Zero-Dependency Native WebSocket & HTTP servers**, **Open-Source Voice AI** (Whisper Tiny STT + Piper TTS) with ultra-low RAM usage (~140MB), and complete interactive terminal agent control across your local shell and browser UI.
+Featuring **zero-dependency native WebSocket and HTTP servers**, **open-source voice AI** (Whisper Tiny STT + Piper TTS), and a browser-first dashboard for monitoring, prompting, approvals, and live agent telemetry.
 
 ![HUD Tactical Deck](https://raw.githubusercontent.com/sidx1-scratch/termagenthud/main/docs/hud-preview.png)
 
@@ -10,7 +10,7 @@ Featuring **Zero-Dependency Native WebSocket & HTTP servers**, **Open-Source Voi
 
 ## ⚡ 1-Line Universal Install (Zero Setup Needed)
 
-Anyone can install the full JARVIS Tactical HUD with **a single command**. You don't even need to clone the repository manually—the bootstrap script does everything:
+Anyone can install the full JARVIS tactical HUD with **a single command**. You don't even need to clone the repository manually—the bootstrap script does everything:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/sidx1-scratch/termagenthud/main/install.sh | sudo bash
@@ -209,4 +209,4 @@ If you have an idea for a new control layer, HUD feature, or agent integration, 
 ---
 
 ## 📜 License
-MIT License. Built for autonomous AI agents and pilots.
+MIT License. Built for autonomous AI agents.
