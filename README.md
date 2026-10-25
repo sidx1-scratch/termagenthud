@@ -33,7 +33,7 @@ Open any terminal in any directory and run:
 termagenthud
 ```
 
-- **Runs in the background** and immediately returns your terminal prompt (`$` free to use).
+- **Runs attached to the terminal** so the selected agent, voice engine, and MCP bridge stay visible and connected. Use your terminal supervisor if you want daemon mode.
 - **Pops open the Cybernetic HUD** in your default browser at `http://localhost:3000`.
 - **Starts Whisper Tiny STT + Piper TTS** with wake words *"Jarvis"*, *"Computer"*, or *"Agent"*.
 - **Launches your agent** (`agy`, `claude`, etc.) in an interactive real pseudo-terminal (PTY).

@@ -159,7 +159,7 @@ export class NativeWebSocketServer extends EventEmitter {
       });
     });
 
-    this.server.listen(port, () => {
+    this.server.listen(port, '127.0.0.1', () => {
       this.emit('listening', port);
     });
   }

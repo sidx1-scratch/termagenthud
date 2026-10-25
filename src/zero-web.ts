@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 import { NativeWebSocketServer, NativeWebSocket } from './zero-ws.js';
 import { AgentSessionBridge } from './agent-bridge.js';
 import { VoiceEngine, VoiceEvent } from './voice-engine.js';
+import { autoInstallVoice } from './setup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,8 +32,8 @@ export class NativeJarvisWebServer extends EventEmitter {
   private agentBridge: AgentSessionBridge;
   private voice: VoiceEngine;
   private port: number;
-  private wsPort: number = 19842;
-  private pendingApproval: { promptText: string; rawLine: string } | null = null;
+  private wsPort: number = Number(process.env.TERMAGENTHUD_WS_PORT || 19842);
+  private pendingApproval: { promptText: string; rawLine: string; requestId?: string } | null = null;
 
   constructor(port = 3000) {
     super();
@@ -49,12 +50,10 @@ export class NativeJarvisWebServer extends EventEmitter {
     this.wss = new NativeWebSocketServer(this.wsPort);
     this.initWebSocketEvents();
     this.initAgentEvents();
+    // Finish voice setup before starting Whisper, otherwise the first launch
+    // can start a listener with missing dependencies and never recover.
+    autoInstallVoice();
     this.initVoiceEvents();
-
-    // Auto-check and setup voice models if missing
-    import('./setup.js').then(({ autoInstallVoice }) => {
-      autoInstallVoice();
-    });
   }
 
   private handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -127,6 +126,7 @@ export class NativeJarvisWebServer extends EventEmitter {
     } else if (endpoint === '/api/select-agent') {
       if (data.agentId) {
         this.agentBridge.setAgent(data.agentId);
+        this.agentBridge.startAgent(this.agentBridge.getActiveAgent().binaries[0], [], this.agentBridge.getWorkingDir());
         this.voice.speak(`Target agent switched to ${this.agentBridge.getActiveAgent().name}`);
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -177,6 +177,7 @@ export class NativeJarvisWebServer extends EventEmitter {
       this.pendingApproval = info;
       this.wss.broadcast(JSON.stringify({
         type: 'APPROVAL_REQUEST',
+        requestId: undefined,
         command: info.promptText,
         explanation: 'Confirmation required by terminal agent',
       }));
@@ -260,17 +261,27 @@ export class NativeJarvisWebServer extends EventEmitter {
 
   private resolveApproval(approved: boolean) {
     if (!this.pendingApproval) return;
+    const requestId = this.pendingApproval.requestId;
     this.agentBridge.sendApproval(approved);
     this.pendingApproval = null;
     this.wss.broadcast(JSON.stringify({
       type: 'APPROVAL_RESPONSE',
       approved,
+      requestId,
     }));
     this.voice.speak(approved ? 'Command approved. Executing.' : 'Command rejected.');
   }
 
   private handleClientMessage(msg: any) {
-    if (msg.type === 'APPROVAL_RESPONSE') {
+    if (msg.type === 'APPROVAL_REQUEST') {
+      this.pendingApproval = {
+        promptText: msg.command || 'Approval requested',
+        rawLine: msg.explanation || '',
+        requestId: msg.requestId,
+      };
+      this.wss.broadcast(JSON.stringify(msg));
+      this.voice.speak(`Commander, approval requested: ${msg.explanation || msg.command}. Do you authorize?`);
+    } else if (msg.type === 'APPROVAL_RESPONSE') {
       this.resolveApproval(!!msg.approved);
     } else if (msg.type === 'TRANSMIT_COMMAND') {
       this.agentBridge.writeInput(msg.command);
@@ -281,6 +292,8 @@ export class NativeJarvisWebServer extends EventEmitter {
     } else if (msg.type === 'SELECT_AGENT') {
       if (msg.agentId) {
         this.agentBridge.setAgent(msg.agentId);
+        // A selection is operational: immediately attach the selected agent to the HUD.
+        this.agentBridge.startAgent(this.agentBridge.getActiveAgent().binaries[0], [], this.agentBridge.getWorkingDir());
         this.voice.speak(`Active agent switched to ${this.agentBridge.getActiveAgent().name}`);
         this.wss.broadcast(JSON.stringify({
           type: 'AGENT_STATUS',

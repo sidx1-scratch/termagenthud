@@ -6,12 +6,25 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { WebSocket } from 'ws';
 
-const HUD_WS_PORT = 19842;
+const HUD_WS_PORT = Number(process.env.TERMAGENTHUD_WS_PORT || 19842);
 let wsClient: WebSocket | null = null;
+let requestCounter = 0;
+const pendingApprovals = new Map<string, (approved: boolean) => void>();
 
 function connectToHud() {
   try {
     wsClient = new WebSocket(`ws://127.0.0.1:${HUD_WS_PORT}`);
+    wsClient.on('message', (raw) => {
+      try {
+        const message = JSON.parse(raw.toString());
+        if (message.type === 'APPROVAL_RESPONSE' && message.requestId) {
+          pendingApprovals.get(message.requestId)?.(!!message.approved);
+          pendingApprovals.delete(message.requestId);
+        }
+      } catch {
+        // Ignore malformed HUD messages; MCP remains available.
+      }
+    });
     wsClient.on('error', () => {
       wsClient = null;
     });
@@ -31,6 +44,19 @@ function sendToHud(data: any) {
   if (wsClient && wsClient.readyState === WebSocket.OPEN) {
     wsClient.send(JSON.stringify(data));
   }
+}
+
+function waitForApproval(requestId: string, timeoutSec: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      pendingApprovals.delete(requestId);
+      resolve(false);
+    }, Math.max(1, timeoutSec) * 1000);
+    pendingApprovals.set(requestId, (approved) => {
+      clearTimeout(timer);
+      resolve(approved);
+    });
+  });
 }
 
 const server = new Server(
@@ -113,19 +139,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const cmd = String(args?.command || '');
     const exp = String(args?.explanation || '');
     const timeout = Number(args?.timeoutSec || 30);
+    const requestId = `approval-${++requestCounter}`;
+
+    if (!wsClient || wsClient.readyState !== WebSocket.OPEN) {
+      return {
+        content: [{ type: 'text', text: '[HUD-VOICE] HUD is not connected. Start termagenthud in the foreground first.' }],
+        isError: true,
+      };
+    }
 
     sendToHud({
       type: 'APPROVAL_REQUEST',
+      requestId,
       command: cmd,
       explanation: exp,
       timeout,
     });
 
+    const approved = await waitForApproval(requestId, timeout);
     return {
       content: [
         {
           type: 'text',
-          text: `[HUD-VOICE] Approval request broadcasted to HUD for command: "${cmd}". Spoken aloud via Piper: "${exp}".`,
+          text: approved
+            ? `[HUD-VOICE] Approved: "${cmd}".`
+            : `[HUD-VOICE] Rejected or timed out: "${cmd}".`,
         },
       ],
     };

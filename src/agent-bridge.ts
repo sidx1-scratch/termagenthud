@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { fileURLToPath } from 'url';
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { getSelectedAgentPath } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,10 +78,15 @@ export class AgentSessionBridge extends EventEmitter {
   }
 
   public detectInstalledAgent(): SupportedAgent {
-    // Check if agy exists in PATH or user local bin
-    if (fs.existsSync('/home/sidx1/.local/bin/agy')) {
-      this.activeAgent = KNOWN_AGENTS[0];
-      return this.activeAgent;
+    try {
+      const saved = JSON.parse(fs.readFileSync(getSelectedAgentPath(), 'utf8'));
+      const selected = KNOWN_AGENTS.find((agent) => agent.id === saved.agentId);
+      if (selected) {
+        this.activeAgent = selected;
+        return selected;
+      }
+    } catch {
+      // First run: use the default agent.
     }
     this.activeAgent = KNOWN_AGENTS[0];
     return this.activeAgent;
@@ -90,6 +96,12 @@ export class AgentSessionBridge extends EventEmitter {
     const found = KNOWN_AGENTS.find((a) => a.id === agentId || a.binaries.includes(agentId));
     if (found) {
       this.activeAgent = found;
+      try {
+        fs.mkdirSync(path.dirname(getSelectedAgentPath()), { recursive: true });
+        fs.writeFileSync(getSelectedAgentPath(), JSON.stringify({ agentId: found.id }, null, 2));
+      } catch {
+        // A read-only home must not prevent the HUD from running.
+      }
       this.emit('agent_changed', found);
     }
   }

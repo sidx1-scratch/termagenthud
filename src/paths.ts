@@ -25,3 +25,7 @@ export function getPiperModelPath(): string {
 export function getPiperConfigPath(): string {
   return path.join(getModelsDir(), 'voice.onnx.json');
 }
+
+export function getSelectedAgentPath(): string {
+  return path.join(getAppDataDir(), 'selected-agent.json');
+}

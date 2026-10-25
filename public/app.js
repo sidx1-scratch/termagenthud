@@ -97,6 +97,7 @@ setInterval(() => {
 
 // WebSocket Connection to HUD Bridge / MCP
 let ws;
+let activeApprovalRequestId;
 const commsStream = document.getElementById('comms-stream');
 const approvalBay = document.getElementById('approval-bay');
 const approvalMsg = document.getElementById('approval-msg');
@@ -158,6 +159,7 @@ function connectWs() {
 
 function handleMessage(msg) {
   if (msg.type === 'APPROVAL_REQUEST') {
+    activeApprovalRequestId = msg.requestId;
     approvalBay.classList.remove('standby');
     approvalBay.classList.add('active');
     approvalMsg.innerText = `CONFIRMATION REQUIRED: ${msg.explanation || msg.command}`;
@@ -193,11 +195,11 @@ function resolveApproval(approved) {
   if (approved) {
     approvalMsg.innerText = 'STATUS: AUTHORIZATION GRANTED.';
     appendLog('[APPROVAL] User authorized execution.', 'success');
-    sendWs({ type: 'APPROVAL_RESPONSE', approved: true });
+    sendWs({ type: 'APPROVAL_RESPONSE', approved: true, requestId: activeApprovalRequestId });
   } else {
     approvalMsg.innerText = 'STATUS: AUTHORIZATION DENIED.';
     appendLog('[APPROVAL] User aborted execution.', 'warn');
-    sendWs({ type: 'APPROVAL_RESPONSE', approved: false });
+    sendWs({ type: 'APPROVAL_RESPONSE', approved: false, requestId: activeApprovalRequestId });
   }
 }
 

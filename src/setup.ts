@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
-import { getVenvPython, getPiperModelPath, getAppDataDir } from './paths.js';
+import { getVenvPython, getPiperModelPath, getPiperConfigPath, getAppDataDir } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,11 +13,11 @@ export function autoInstallVoice(): boolean {
   const venvPython = getVenvPython();
   const piperModel = getPiperModelPath();
 
-  if (fs.existsSync(venvPython) && fs.existsSync(piperModel)) {
+  if (fs.existsSync(venvPython) && fs.existsSync(piperModel) && fs.existsSync(getPiperConfigPath())) {
     return true;
   }
 
-  console.log(`[HUD] Voice models missing in ${getAppDataDir()}. Installing in background...`);
+  console.log(`[HUD] Voice models missing in ${getAppDataDir()}. Installing before the listener starts...`);
   try {
     execSync(`bash "${scriptPath}"`, { stdio: 'inherit' });
     return true;

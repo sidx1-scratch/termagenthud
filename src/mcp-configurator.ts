@@ -46,6 +46,16 @@ export function configureAgentMcp(agentId: string, mcpServerPath: string): strin
 
   const configFiles = targets[agentId] || targets['antigravity'];
 
+  // Runtime selection is shared with the HUD process, including when setup was
+  // run through sudo for the real user.
+  try {
+    const appDir = path.join(home, '.config', 'termagenthud');
+    fs.mkdirSync(appDir, { recursive: true });
+    fs.writeFileSync(path.join(appDir, 'selected-agent.json'), JSON.stringify({ agentId }, null, 2));
+  } catch {
+    // Configuration files below are still attempted independently.
+  }
+
   for (const file of configFiles) {
     try {
       const dir = path.dirname(file);

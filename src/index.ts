@@ -16,11 +16,12 @@ if (isMcpMode) {
   hud.log('{cyan-fg}[JARVIS]{/cyan-fg} Tactical Terminal HUD active.');
 } else {
   // 1. Starts background HTTP + WebSocket server
-  const server = new NativeJarvisWebServer(3000);
+  const server = new NativeJarvisWebServer(Number(process.env.TERMAGENTHUD_PORT || 3000));
   
   // 2. Automatically launches the target AI agent (agy by default or custom) in a real PTY session
   const agentBridge = (server as any).agentBridge;
   if (agentBridge) {
+    if (customAgentCommand) agentBridge.setAgent(customAgentCommand);
     const target = customAgentCommand || agentBridge.getActiveAgent().binaries[0];
     agentBridge.startAgent(target);
   }

@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
-import { getPiperModelPath, getPiperConfigPath } from './paths.js';
+import { getPiperModelPath, getPiperConfigPath, getVenvPython } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +58,9 @@ export class VoiceEngine extends EventEmitter {
     const hasPiper = fs.existsSync(this.piperModel);
     if (hasPiper) {
       const player = fs.existsSync('/usr/bin/aplay') ? 'aplay -q' : (fs.existsSync('/usr/bin/paplay') ? 'paplay' : 'aplay');
-      const piperCmd = `echo "${text.replace(/"/g, '\\"')}" | python3 -m piper --model "${this.piperModel}" --config "${this.piperConfig}" --output-raw | ${player} -r 16000 -f S16_LE -t raw -c 1`;
+      const python = fs.existsSync(getVenvPython()) ? getVenvPython() : 'python3';
+      const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const piperCmd = `printf '%s\\n' "${escaped}" | "${python}" -m piper --model "${this.piperModel}" --config "${this.piperConfig}" --output-raw | ${player} -r 16000 -f S16_LE -t raw -c 1`;
 
       const proc = spawn('bash', ['-c', piperCmd]);
 
@@ -89,7 +91,8 @@ export class VoiceEngine extends EventEmitter {
     const listenerScript = path.join(rootDir, 'scripts', 'stt_listener.py');
     if (!fs.existsSync(listenerScript)) return;
 
-    this.listenerProcess = spawn('python3', [listenerScript]);
+    const python = fs.existsSync(getVenvPython()) ? getVenvPython() : 'python3';
+    this.listenerProcess = spawn(python, [listenerScript]);
 
     this.listenerProcess.stdout?.on('data', (data) => {
       const lines = data.toString().split('\n');
