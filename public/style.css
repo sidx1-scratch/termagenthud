@@ -233,6 +233,7 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .corner-accent {
@@ -534,15 +535,35 @@ body {
   font-size: 0.85rem;
   padding: 14px 18px;
   overflow-y: auto;
+  min-height: 0;
+  max-height: 340px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   background: rgba(2, 5, 10, 0.4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) rgba(0, 243, 255, 0.08);
+}
+
+.cyber-terminal-stream::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cyber-terminal-stream::-webkit-scrollbar-track {
+  background: rgba(0, 243, 255, 0.06);
+  border-left: 1px solid rgba(0, 243, 255, 0.12);
+}
+
+.cyber-terminal-stream::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.65);
+  border: 2px solid rgba(2, 5, 10, 0.7);
+  border-radius: 8px;
 }
 
 .stream-row {
   line-height: 1.4;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .stream-row .timestamp {

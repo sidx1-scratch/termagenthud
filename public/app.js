@@ -133,6 +133,16 @@ function appendLog(text, type = 'sys') {
   commsStream.scrollTop = commsStream.scrollHeight;
 }
 
+function cleanAgentOutput(text) {
+  const metadata = /^(?:OpenAI Codex v\S+|[-]{4,}|workdir:|model:|provider:|approval:|sandbox:|reasoning effort:|reasoning summaries:|session id:|user$|codex$|tokens used$|[\d,]+$)/i;
+  return String(text)
+    .split(/\r?\n/)
+    .filter((line) => !metadata.test(line.trim()))
+    .filter((line) => !/^OpenAI Codex .*Tip:/i.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
 function connectWs() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.hostname}:19842`;
@@ -167,7 +177,8 @@ function handleMessage(msg) {
     appendLog(`[APPROVAL REQUEST] Command: ${msg.command}`, 'warn');
     playAlertTone();
   } else if (msg.type === 'AGENT_OUTPUT') {
-    appendLog(msg.data, 'agent');
+    const output = cleanAgentOutput(msg.data);
+    if (output) appendLog(output, 'agent');
   } else if (msg.type === 'SUBAGENT_ACTIVITY') {
     appendLog(`[SUBAGENT] ${msg.name}: ${msg.action}`, 'agent');
   } else if (msg.type === 'AGENT_STATUS') {
