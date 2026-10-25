@@ -72,7 +72,41 @@ When an agent encounters a confirmation check (e.g., `Proceed? [y/N]`, `Allow co
 - Say **"no"**, **"reject"**, or **"cancel"** ➔ `n` is sent to the agent.
 - Alternatively, click the green/red buttons on the HUD or press `Y`/`N`.
 
-### 4. Subagent Tracking
+### 4. Universal Multi-Agent Support & Changing Target Agents
+
+TermAgentHUD natively supports every terminal AI coder on the market:
+- **Google Antigravity CLI** (`agy` / `antigravity`)
+- **Claude Code** (`claude`)
+- **OpenCode CLI** (`opencode`)
+- **OpenClaw CLI** (`openclaw`)
+- **OpenAI Codex CLI** (`codex`)
+- **Aider AI** (`aider`)
+- **Cursor CLI** (`cursor-agent`)
+- **Gemini CLI** (`gemini`)
+- **GitHub Copilot CLI** (`gh copilot`)
+- **Custom Terminal Agent**
+
+#### How to Switch or Change the Target Agent Command:
+1. **Via the Browser HUD Selector**:
+   - In the top navigation bar of the Web HUD (`http://localhost:3000`), click the **`TARGET: ...`** dropdown to switch between any agent instantly.
+2. **Via Voice Command**:
+   - Say: *"Jarvis, switch agent to opencode"* or *"Computer, set agent to openclaw"*.
+3. **Specifying a Custom Agent Binary or Wrapper**:
+   - In the Web HUD, choose **`TARGET: Custom Shell Agent`**.
+   - Or send an API request:
+     ```bash
+     curl -X POST http://localhost:3000/api/start-agent \
+       -H "Content-Type: application/json" \
+       -d '{"command": "openclaw", "args": ["--interactive"], "cwd": "/path/to/project"}'
+     ```
+   - Alternatively, pass the agent command directly when starting:
+     ```bash
+     termagenthud --agent=openclaw
+     # or
+     termagenthud --agent="opencode --model deepseek-coder"
+     ```
+
+### 5. Subagent Tracking
 Whenever the main agent spawns subagents (e.g. `invoke_subagent`, Research Subagents, background testers), they are detected and displayed as blips on the 360° tactical radar.
 
 ---
