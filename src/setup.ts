@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const scriptPath = path.join(rootDir, 'scripts', 'setup_voice.sh');
+const scriptPath = path.join(rootDir, 'scripts', 'install.sh');
 
 export function autoInstallVoice(): boolean {
   const venvPython = path.join(rootDir, '.venv', 'bin', 'python');

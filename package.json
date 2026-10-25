@@ -13,7 +13,8 @@
     "hud": "node dist/index.js",
     "mcp": "node dist/mcp-server.js",
     "test": "node dist/test.js",
-    "setup-models": "node dist/setup.js"
+    "setup": "bash scripts/install.sh",
+    "setup-models": "bash scripts/install.sh"
   },
   "keywords": [
     "mcp",

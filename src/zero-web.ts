@@ -50,6 +50,11 @@ export class NativeJarvisWebServer extends EventEmitter {
     this.initWebSocketEvents();
     this.initAgentEvents();
     this.initVoiceEvents();
+
+    // Auto-check and setup voice models if missing
+    import('./setup.js').then(({ autoInstallVoice }) => {
+      autoInstallVoice();
+    });
   }
 
   private handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse) {
