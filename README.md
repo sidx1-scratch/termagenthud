@@ -119,25 +119,25 @@ TermAgentHUD includes a first-class Model Context Protocol (MCP) server that any
 
 Add `jarvis-hud` to your agent's MCP configuration file (e.g., `~/.gemini/antigravity-cli/mcp.json`, `~/.claude/claude_desktop_config.json`, or `.cursor/mcp.json`):
 
-#### Global Binary Configuration:
-```json
-{
-  "mcpServers": {
-    "jarvis-hud": {
-      "command": "node",
-      "args": ["/home/sidx1/termagenthud/dist/mcp-server.js"]
-    }
-  }
-}
-```
-
-Or using the globally linked executable:
+#### Global Binary Configuration (Recommended - works anywhere on any system):
 ```json
 {
   "mcpServers": {
     "jarvis-hud": {
       "command": "termagenthud",
       "args": ["--mcp"]
+    }
+  }
+}
+```
+
+Or using an environment variable / relative path:
+```json
+{
+  "mcpServers": {
+    "jarvis-hud": {
+      "command": "node",
+      "args": ["/path/to/termagenthud/dist/mcp-server.js"]
     }
   }
 }
