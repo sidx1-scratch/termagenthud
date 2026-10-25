@@ -30,6 +30,7 @@ console.log('  ✔ "computer approve" voice approval verified.');
 // 2. Test Agent Session Bridge interactive prompt detector
 console.log('[TEST 2] Testing Agent Session Bridge interactive prompt detection...');
 const bridge = new AgentSessionBridge();
+bridge.setAgent('antigravity');
 let detectedApproval = false;
 let detectedSubagent = false;
 
@@ -51,6 +52,13 @@ detectedApproval = false;
 (bridge as any).handleOutput('approval: never\n');
 assert.strictEqual(detectedApproval, false);
 console.log('  ✔ Non-interactive Codex approval metadata is ignored.');
+
+bridge.setAgent('codex');
+detectedApproval = false;
+(bridge as any).handleOutput('Do you want to proceed? [y/N]\n');
+assert.strictEqual(detectedApproval, false);
+console.log('  ✔ Codex output cannot create terminal approval requests.');
+bridge.setAgent('antigravity');
 
 (bridge as any).handleOutput('invoke_subagent: Research subagent analyzing codebase...\n');
 assert.strictEqual(detectedSubagent, true);

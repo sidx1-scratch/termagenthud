@@ -267,13 +267,18 @@ export class AgentSessionBridge extends EventEmitter {
 
     const lines = cleanChunk.split('\n');
     for (const line of lines) {
-      for (const pattern of confirmPatterns) {
-        if (pattern.test(line)) {
-          this.emit('approval_required', {
-            promptText: line.trim().replace(/\x1b\[[0-9;]*m/g, ''),
-            rawLine: line,
-          });
-          break;
+      // Codex transmissions use `codex exec --sandbox workspace-write`, which
+      // has no interactive approval prompt. Its normal status text must never
+      // become a phantom HUD approval request.
+      if (this.activeAgent.id !== 'codex') {
+        for (const pattern of confirmPatterns) {
+          if (pattern.test(line)) {
+            this.emit('approval_required', {
+              promptText: line.trim().replace(/\x1b\[[0-9;]*m/g, ''),
+              rawLine: line,
+            });
+            break;
+          }
         }
       }
 
