@@ -77,18 +77,58 @@ Whenever the main agent spawns subagents (e.g. `invoke_subagent`, Research Subag
 
 ---
 
-## 📡 MCP Server Integration (Optional)
+## 📡 Model Context Protocol (MCP) Server Integration
 
-Add `termagenthud` to your agent's `mcp.json`:
+TermAgentHUD includes a first-class Model Context Protocol (MCP) server that any terminal AI agent (Google Antigravity CLI, Claude Code, Cursor, Codex CLI) can connect to for spoken alerts and tactical voice authorization.
+
+### 1. Configuration for AI Agents
+
+Add `jarvis-hud` to your agent's MCP configuration file (e.g., `~/.gemini/antigravity-cli/mcp.json`, `~/.claude/claude_desktop_config.json`, or `.cursor/mcp.json`):
+
+#### Global Binary Configuration:
 ```json
 {
   "mcpServers": {
     "jarvis-hud": {
       "command": "node",
-      "args": ["/path/to/termagenthud/dist/mcp-server.js"]
+      "args": ["/home/sidx1/termagenthud/dist/mcp-server.js"]
     }
   }
 }
+```
+
+Or using the globally linked executable:
+```json
+{
+  "mcpServers": {
+    "jarvis-hud": {
+      "command": "termagenthud",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+---
+
+### 2. Available MCP Tools
+
+Once linked, your AI agent gains access to 3 tactical HUD tools:
+
+| MCP Tool Name | Description | Parameters |
+| --- | --- | --- |
+| `request_voice_approval` | Asks the user for vocal approval before executing a sensitive shell command or writing destructive file edits. Speaks the prompt aloud via Piper TTS, flashes the HUD red, and waits for a spoken *"Jarvis, approve"* or *"Computer, reject"*. | `command` (string), `explanation` (string), `timeoutSec` (number) |
+| `speak_hud_announcement` | Announces mission status, task completions, or errors through Piper voice synthesis while logging to the HUD stream. | `message` (string), `level` (`info` \| `warning` \| `critical` \| `success`) |
+| `update_hud_telemetry` | Streams real-time operational status (e.g., `ENGAGED`, `ANALYZING`, `IDLE`), current active tool, and progress % to the tactical HUD dials. | `status` (string), `activeTool` (string), `progress` (number) |
+
+---
+
+### 3. Example Agent Prompt
+
+You can prompt your AI agent to utilize the HUD tools directly:
+
+```
+"Before executing any bash command that modifies files or makes git commits, call the request_voice_approval tool on the jarvis-hud MCP server so I can confirm it by voice."
 ```
 
 ---
