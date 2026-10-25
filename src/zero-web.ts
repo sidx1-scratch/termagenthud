@@ -119,9 +119,16 @@ export class NativeJarvisWebServer extends EventEmitter {
     if (endpoint === '/api/start-agent') {
       const cmd = data.command || 'agy';
       const args = data.args || [];
-      this.agentBridge.startAgent(cmd, args);
+      const cwd = data.cwd || process.cwd();
+      this.agentBridge.setWorkingDir(cwd);
+      this.agentBridge.startAgent(cmd, args, cwd);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'started', command: cmd }));
+      res.end(JSON.stringify({ status: 'started', command: cmd, cwd }));
+    } else if (endpoint === '/api/set-cwd') {
+      const newCwd = data.cwd || process.cwd();
+      this.agentBridge.setWorkingDir(newCwd);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'cwd_updated', cwd: newCwd }));
     } else if (endpoint === '/api/send-command') {
       this.agentBridge.writeInput(data.command);
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -134,10 +141,11 @@ export class NativeJarvisWebServer extends EventEmitter {
 
   private initWebSocketEvents() {
     this.wss.on('connection', (ws: NativeWebSocket) => {
-      // Send current agent status
+      // Send current agent status & working directory
       ws.send(JSON.stringify({
         type: 'AGENT_STATUS',
         running: this.agentBridge.isRunning(),
+        cwd: this.agentBridge.getWorkingDir(),
       }));
 
       ws.on('message', (message: string) => {
@@ -259,7 +267,14 @@ export class NativeJarvisWebServer extends EventEmitter {
     } else if (msg.type === 'TRANSMIT_COMMAND') {
       this.agentBridge.writeInput(msg.command);
     } else if (msg.type === 'START_AGENT') {
-      this.agentBridge.startAgent(msg.command || 'agy', msg.args || []);
+      const cwd = msg.cwd || this.agentBridge.getWorkingDir();
+      this.agentBridge.setWorkingDir(cwd);
+      this.agentBridge.startAgent(msg.command || 'agy', msg.args || [], cwd);
+    } else if (msg.type === 'SET_CWD') {
+      if (msg.cwd) {
+        this.agentBridge.setWorkingDir(msg.cwd);
+        this.voice.speak(`Working directory updated.`);
+      }
     }
   }
 

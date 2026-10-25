@@ -10,9 +10,21 @@ export class AgentSessionBridge extends EventEmitter {
   private child: ChildProcess | null = null;
   private buffer = '';
   private currentTool: string = 'IDLE';
+  private workingDir: string = process.cwd();
 
-  constructor() {
+  constructor(workingDir?: string) {
     super();
+    if (workingDir) {
+      this.workingDir = workingDir;
+    }
+  }
+
+  public setWorkingDir(dir: string) {
+    this.workingDir = dir;
+  }
+
+  public getWorkingDir(): string {
+    return this.workingDir;
   }
 
   public isRunning(): boolean {
@@ -23,13 +35,16 @@ export class AgentSessionBridge extends EventEmitter {
     return this.child?.pid;
   }
 
-  public startAgent(command = 'agy', args: string[] = []) {
+  public startAgent(command = 'agy', args: string[] = [], cwd?: string) {
     if (this.child) {
       try { this.child.kill(); } catch {}
     }
 
-    // Spawn agent process with full pipe control
+    const runDir = cwd || this.workingDir || process.cwd();
+
+    // Spawn agent process in the target project directory with full pipe control
     this.child = spawn(command, args, {
+      cwd: runDir,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, FORCE_COLOR: '1' },
       shell: true,

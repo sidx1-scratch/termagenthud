@@ -96,6 +96,17 @@ const approvalMsg = document.getElementById('approval-msg');
 const approvalCmd = document.getElementById('approval-cmd');
 const teleStatus = document.getElementById('tele-status');
 const teleTool = document.getElementById('tele-tool');
+const teleCwd = document.getElementById('tele-cwd');
+
+if (teleCwd) {
+  teleCwd.onclick = () => {
+    const dir = prompt('Enter project directory for agent (e.g. /home/user/my-project):', teleCwd.innerText);
+    if (dir && dir.trim()) {
+      sendWs({ type: 'SET_CWD', cwd: dir.trim() });
+      teleCwd.innerText = dir.trim();
+    }
+  };
+}
 
 function appendLog(text, type = 'sys') {
   const line = document.createElement('div');
@@ -142,6 +153,11 @@ function handleMessage(msg) {
   } else if (msg.type === 'SPEAK') {
     appendLog(`[PIPER TTS] "${msg.message}"`, 'voice');
     speakBrowser(msg.message);
+  } else if (msg.type === 'AGENT_STATUS') {
+    if (msg.cwd && teleCwd) teleCwd.innerText = msg.cwd;
+    if (msg.running) {
+      teleStatus.innerText = 'AGENT ENGAGED';
+    }
   } else if (msg.type === 'TELEMETRY') {
     if (msg.status) teleStatus.innerText = msg.status.toUpperCase();
     if (msg.activeTool) teleTool.innerText = msg.activeTool.toUpperCase();
