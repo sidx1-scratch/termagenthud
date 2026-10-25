@@ -22,6 +22,8 @@ export class NativeWebSocket extends EventEmitter {
     });
 
     socket.on('error', (err) => {
+      // A browser refresh or reconnect commonly produces ECONNRESET. Treat
+      // that as a normal client disconnect instead of crashing the HUD.
       this.emit('error', err);
     });
   }
@@ -149,6 +151,10 @@ export class NativeWebSocketServer extends EventEmitter {
           const client = new NativeWebSocket(socket);
           this.clients.add(client);
           this.emit('connection', client);
+
+          client.on('error', () => {
+            // Prevent an unhandled EventEmitter error from terminating the HUD.
+          });
 
           client.on('close', () => {
             this.clients.delete(client);

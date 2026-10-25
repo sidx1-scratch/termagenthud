@@ -142,7 +142,12 @@ export class AgentSessionBridge extends EventEmitter {
       targetBin = '/home/sidx1/.local/bin/agy';
     }
 
-    const fullCmd = [targetBin, ...args];
+    // Codex normally takes over an alternate terminal screen. The HUD streams
+    // PTY text into a browser, so inline mode is required for readable output.
+    const launchArgs = args.length === 0 && this.activeAgent.id === 'codex'
+      ? ['--no-alt-screen']
+      : args;
+    const fullCmd = [targetBin, ...launchArgs];
 
     // Spawn via Python pty_bridge to allocate a real pseudo-terminal
     this.ptyProcess = spawn('python3', [ptyBridgeScript, ...fullCmd], {
@@ -210,8 +215,10 @@ export class AgentSessionBridge extends EventEmitter {
   }
 
   private handleOutput(chunk: string) {
-    this.emit('output', chunk);
-    this.buffer += chunk;
+    const cleanChunk = this.cleanTerminalOutput(chunk);
+    if (!cleanChunk) return;
+    this.emit('output', cleanChunk);
+    this.buffer += cleanChunk;
 
     // Check for interactive confirmations
     const confirmPatterns = [
@@ -227,7 +234,7 @@ export class AgentSessionBridge extends EventEmitter {
       /run this command\?/i,
     ];
 
-    const lines = chunk.split('\n');
+    const lines = cleanChunk.split('\n');
     for (const line of lines) {
       for (const pattern of confirmPatterns) {
         if (pattern.test(line)) {
@@ -246,6 +253,18 @@ export class AgentSessionBridge extends EventEmitter {
         });
       }
     }
+  }
+
+  private cleanTerminalOutput(chunk: string): string {
+    return chunk
+      // OSC hyperlinks/title updates
+      .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
+      // CSI cursor movement, screen mode, colors, and erase commands
+      .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '')
+      // Other two-byte terminal escapes
+      .replace(/\x1b[()][0-2A-Z]/g, '')
+      // Keep readable text, newlines, tabs, and carriage returns.
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
   }
 
   public kill() {
