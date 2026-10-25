@@ -3,6 +3,8 @@ import sys
 import json
 import tempfile
 import os
+import io
+import gc
 import numpy as np
 
 def emit(type_str, **kwargs):
@@ -10,28 +12,41 @@ def emit(type_str, **kwargs):
     print(json.dumps(kwargs), flush=True)
 
 try:
-    import whisper
+    from faster_whisper import WhisperModel
     import sounddevice as sd
     from scipy.io.wavfile import write
-except ImportError as e:
-    emit("status", message=f"Missing python dependencies: {e}")
-    sys.exit(1)
+    use_standard_whisper = False
+except ImportError:
+    try:
+        import whisper
+        import sounddevice as sd
+        from scipy.io.wavfile import write
+        use_standard_whisper = True
+    except ImportError as e:
+        emit("status", message=f"Missing python dependencies: {e}")
+        sys.exit(1)
 
 SAMPLE_RATE = 16000
-DURATION = 3.5  # Chunk duration in seconds
+DURATION = 3.0  # 3-second audio window for low latency
 
-emit("status", message="Loading Whisper Tiny engine...")
-model = whisper.load_model("tiny")
-emit("status", message="Whisper Tiny online. Listening for wake words (Jarvis, Computer, Agent)...")
+emit("status", message="Initializing low-RAM STT engine (int8 quantized)...")
+
+if not use_standard_whisper:
+    # faster-whisper with int8 CPU compute uses only ~120-150MB RAM
+    model = WhisperModel("tiny.en", device="cpu", compute_type="int8", cpu_threads=2)
+else:
+    model = whisper.load_model("tiny.en")
+
+emit("status", message="Whisper Tiny online (~150MB RAM). Wake words: Jarvis, Computer, Agent.")
 
 def record_and_transcribe():
     while True:
         try:
-            # Record audio chunk
+            # Record chunk
             audio = sd.rec(int(DURATION * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1, dtype='int16')
             sd.wait()
             
-            # Simple energy threshold check (ignore pure silence)
+            # Silence detection (energy gate to avoid transcribing dead air and save CPU/RAM)
             audio_data = np.frombuffer(audio, dtype=np.int16)
             rms = np.sqrt(np.mean(audio_data.astype(np.float32)**2))
             if rms < 350:
@@ -42,9 +57,17 @@ def record_and_transcribe():
 
             write(temp_filename, SAMPLE_RATE, audio)
 
-            # Transcribe
-            result = model.transcribe(temp_filename, fp16=False, language="en")
-            text = result.get("text", "").strip()
+            if not use_standard_whisper:
+                segments, _ = model.transcribe(
+                    temp_filename,
+                    language="en",
+                    beam_size=1,  # Greedy search: lowest RAM & fastest inference
+                    vad_filter=True  # Voice Activity Detection
+                )
+                text = " ".join([seg.text for seg in segments]).strip()
+            else:
+                result = model.transcribe(temp_filename, fp16=False, language="en")
+                text = result.get("text", "").strip()
 
             if os.path.exists(temp_filename):
                 os.remove(temp_filename)
