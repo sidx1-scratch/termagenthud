@@ -47,6 +47,11 @@ bridge.on('subagent', (info) => {
 assert.strictEqual(detectedApproval, true);
 console.log('  ✔ Agent [y/N] interactive confirmation prompt detection passed.');
 
+detectedApproval = false;
+(bridge as any).handleOutput('approval: never\n');
+assert.strictEqual(detectedApproval, false);
+console.log('  ✔ Non-interactive Codex approval metadata is ignored.');
+
 (bridge as any).handleOutput('invoke_subagent: Research subagent analyzing codebase...\n');
 assert.strictEqual(detectedSubagent, true);
 console.log('  ✔ Subagent invocation detection passed.');

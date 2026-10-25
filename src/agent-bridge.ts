@@ -260,13 +260,9 @@ export class AgentSessionBridge extends EventEmitter {
       /\[y\/n\]/i,
       /\(y\/n\)/i,
       /\[yes\/no\]/i,
-      /proceed\?/i,
-      /approve/i,
-      /permission check/i,
-      /confirm\?/i,
-      /allow execution\?/i,
-      /apply this change\?/i,
-      /run this command\?/i,
+      /do you want to (proceed|continue|approve)\??/i,
+      /(?:allow|apply|run) (?:this|the) (?:command|change)\??/i,
+      /permission required.*\?/i,
     ];
 
     const lines = cleanChunk.split('\n');
