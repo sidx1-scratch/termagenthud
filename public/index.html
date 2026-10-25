@@ -21,7 +21,18 @@
       <span class="hud-sub">SYS // COMBAT READY</span>
     </div>
     <div class="header-center">
-      <span class="tag">TARGET: ANTIGRAVITY CLI</span>
+      <select id="agent-select" class="tag" style="background:#070b12; color:var(--hud-cyan); border:1px solid var(--hud-border); cursor:pointer;">
+        <option value="antigravity">TARGET: Antigravity CLI (agy)</option>
+        <option value="claude-code">TARGET: Claude Code (claude)</option>
+        <option value="opencode">TARGET: OpenCode CLI (opencode)</option>
+        <option value="openclaw">TARGET: OpenClaw CLI (openclaw)</option>
+        <option value="codex">TARGET: OpenAI Codex CLI (codex)</option>
+        <option value="aider">TARGET: Aider AI (aider)</option>
+        <option value="cursor-cli">TARGET: Cursor CLI (cursor)</option>
+        <option value="gemini-cli">TARGET: Gemini CLI (gemini)</option>
+        <option value="copilot">TARGET: GitHub Copilot CLI</option>
+        <option value="custom">TARGET: Custom Shell Agent</option>
+      </select>
       <span class="tag mcp">MCP: CONNECTED</span>
       <span class="tag voice" id="voice-tag">VOICE: WHISPER-TINY (OFFLINE/READY)</span>
     </div>

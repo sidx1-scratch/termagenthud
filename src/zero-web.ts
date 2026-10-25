@@ -117,13 +117,20 @@ export class NativeJarvisWebServer extends EventEmitter {
 
   private handleApiRoute(endpoint: string, data: any, res: http.ServerResponse) {
     if (endpoint === '/api/start-agent') {
-      const cmd = data.command || 'agy';
+      const cmd = data.command || this.agentBridge.getActiveAgent().binaries[0];
       const args = data.args || [];
       const cwd = data.cwd || process.cwd();
       this.agentBridge.setWorkingDir(cwd);
       this.agentBridge.startAgent(cmd, args, cwd);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'started', command: cmd, cwd }));
+    } else if (endpoint === '/api/select-agent') {
+      if (data.agentId) {
+        this.agentBridge.setAgent(data.agentId);
+        this.voice.speak(`Target agent switched to ${this.agentBridge.getActiveAgent().name}`);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'agent_selected', agent: this.agentBridge.getActiveAgent() }));
     } else if (endpoint === '/api/set-cwd') {
       const newCwd = data.cwd || process.cwd();
       this.agentBridge.setWorkingDir(newCwd);
@@ -146,6 +153,7 @@ export class NativeJarvisWebServer extends EventEmitter {
         type: 'AGENT_STATUS',
         running: this.agentBridge.isRunning(),
         cwd: this.agentBridge.getWorkingDir(),
+        agent: this.agentBridge.getActiveAgent(),
       }));
 
       ws.on('message', (message: string) => {
@@ -269,7 +277,18 @@ export class NativeJarvisWebServer extends EventEmitter {
     } else if (msg.type === 'START_AGENT') {
       const cwd = msg.cwd || this.agentBridge.getWorkingDir();
       this.agentBridge.setWorkingDir(cwd);
-      this.agentBridge.startAgent(msg.command || 'agy', msg.args || [], cwd);
+      this.agentBridge.startAgent(msg.command || this.agentBridge.getActiveAgent().binaries[0], msg.args || [], cwd);
+    } else if (msg.type === 'SELECT_AGENT') {
+      if (msg.agentId) {
+        this.agentBridge.setAgent(msg.agentId);
+        this.voice.speak(`Active agent switched to ${this.agentBridge.getActiveAgent().name}`);
+        this.wss.broadcast(JSON.stringify({
+          type: 'AGENT_STATUS',
+          running: this.agentBridge.isRunning(),
+          cwd: this.agentBridge.getWorkingDir(),
+          agent: this.agentBridge.getActiveAgent(),
+        }));
+      }
     } else if (msg.type === 'SET_CWD') {
       if (msg.cwd) {
         this.agentBridge.setWorkingDir(msg.cwd);

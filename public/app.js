@@ -94,7 +94,14 @@ const commsStream = document.getElementById('comms-stream');
 const approvalBay = document.getElementById('approval-bay');
 const approvalMsg = document.getElementById('approval-msg');
 const approvalCmd = document.getElementById('approval-cmd');
-const teleStatus = document.getElementById('tele-status');
+const agentSelect = document.getElementById('agent-select');
+
+if (agentSelect) {
+  agentSelect.onchange = () => {
+    sendWs({ type: 'SELECT_AGENT', agentId: agentSelect.value });
+    appendLog(`[TARGET SWITCH] Agent set to: ${agentSelect.options[agentSelect.selectedIndex].text}`, 'agent');
+  };
+}
 const teleTool = document.getElementById('tele-tool');
 const teleCwd = document.getElementById('tele-cwd');
 
@@ -155,6 +162,7 @@ function handleMessage(msg) {
     speakBrowser(msg.message);
   } else if (msg.type === 'AGENT_STATUS') {
     if (msg.cwd && teleCwd) teleCwd.innerText = msg.cwd;
+    if (msg.agent && agentSelect) agentSelect.value = msg.agent.id;
     if (msg.running) {
       teleStatus.innerText = 'AGENT ENGAGED';
     }
