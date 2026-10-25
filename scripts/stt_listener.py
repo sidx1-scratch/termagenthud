@@ -4,7 +4,7 @@ import json
 import tempfile
 import os
 import io
-import gc
+import re
 import numpy as np
 
 def emit(type_str, **kwargs):
@@ -27,17 +27,19 @@ except ImportError:
         sys.exit(1)
 
 SAMPLE_RATE = 16000
-DURATION = 3.0  # 3-second audio window for low latency
+DURATION = 2.5  # 2.5s snappy audio window for fast response
 
-emit("status", message="Initializing low-RAM STT engine (int8 quantized)...")
+emit("status", message="Initializing Whisper Tiny engine...")
 
 if not use_standard_whisper:
-    # faster-whisper with int8 CPU compute uses only ~120-150MB RAM
     model = WhisperModel("tiny.en", device="cpu", compute_type="int8", cpu_threads=2)
 else:
     model = whisper.load_model("tiny.en")
 
-emit("status", message="Whisper Tiny online (~150MB RAM). Wake words: Jarvis, Computer, Agent.")
+emit("status", message="Whisper Tiny online! Microphone listening for: Jarvis, Computer, Agent")
+
+def clean_text(t):
+    return re.sub(r'[^\w\s]', '', t).strip().lower()
 
 def record_and_transcribe():
     while True:
@@ -45,11 +47,11 @@ def record_and_transcribe():
             # Record chunk
             audio = sd.rec(int(DURATION * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1, dtype='int16')
             sd.wait()
-            
-            # Silence detection (energy gate to avoid transcribing dead air and save CPU/RAM)
+
+            # Dynamic RMS check - lowered threshold to 50 so quiet voices and distant mics aren't ignored
             audio_data = np.frombuffer(audio, dtype=np.int16)
             rms = np.sqrt(np.mean(audio_data.astype(np.float32)**2))
-            if rms < 350:
+            if rms < 50:
                 continue
 
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
@@ -61,8 +63,8 @@ def record_and_transcribe():
                 segments, _ = model.transcribe(
                     temp_filename,
                     language="en",
-                    beam_size=1,  # Greedy search: lowest RAM & fastest inference
-                    vad_filter=True  # Voice Activity Detection
+                    beam_size=1,
+                    vad_filter=False  # Disabled aggressive VAD to avoid cutting off wake words
                 )
                 text = " ".join([seg.text for seg in segments]).strip()
             else:
@@ -70,13 +72,17 @@ def record_and_transcribe():
                 text = result.get("text", "").strip()
 
             if os.path.exists(temp_filename):
-                os.remove(temp_filename)
+                try:
+                    os.remove(temp_filename)
+                except:
+                    pass
 
             if text and len(text) > 1:
-                emit("transcript", text=text)
+                cleaned = clean_text(text)
+                emit("transcript", text=text, cleaned=cleaned)
 
         except Exception as e:
-            emit("status", message=f"Audio error: {str(e)}")
+            emit("status", message=f"Microphone input note: {str(e)}")
             break
 
 if __name__ == "__main__":

@@ -111,21 +111,22 @@ export class VoiceEngine extends EventEmitter {
 
   public handleTranscript(rawText: string) {
     const text = rawText.trim();
-    const lower = text.toLowerCase();
+    const lower = text.toLowerCase().replace(/[^a-z0-9\s]/g, '');
 
-    const wakeWords = ['jarvis', 'computer', 'agent'];
+    // Wake words and phonetic variations to catch misheard syllables
+    const wakeWords = ['jarvis', 'travis', 'harvest', 'service', 'computer', 'agent'];
     let detectedWakeWord: string | undefined;
 
     for (const ww of wakeWords) {
-      if (lower.startsWith(ww) || lower.includes(ww)) {
-        detectedWakeWord = ww;
+      if (lower.startsWith(ww) || lower.includes(` ${ww}`) || lower.includes(`${ww} `)) {
+        detectedWakeWord = (ww === 'travis' || ww === 'harvest' || ww === 'service') ? 'jarvis' : ww;
         break;
       }
     }
 
     let command = text;
     if (detectedWakeWord) {
-      const regex = new RegExp(`^.*?${detectedWakeWord}[,;:\\s]*`, 'i');
+      const regex = new RegExp(`^.*?(${detectedWakeWord}|travis|harvest|service)[,;:\\s]*`, 'i');
       command = text.replace(regex, '').trim();
     }
 
