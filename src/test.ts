@@ -19,8 +19,8 @@ voice.handleTranscript('jarvis build a weather app with react');
 assert.strictEqual(detectedCmd, 'build a weather app with react');
 console.log('  ✔ "jarvis build <app idea>" parsing verified.');
 
-voice.handleTranscript('jarvis /model gemini-3.8-flash');
-assert.strictEqual(detectedCmd, '/model gemini-3.8-flash');
+voice.handleTranscript('jarvis /model default');
+assert.strictEqual(detectedCmd, '/model default');
 console.log('  ✔ "/model <name>" slash command routing verified.');
 
 voice.handleTranscript('computer approve');

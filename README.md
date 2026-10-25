@@ -58,7 +58,7 @@ The HUD transcribes your speech via Whisper Tiny, routes the prompt into the age
 
 ### 2. Slash Commands (`/model`, `/plan`, `/goal`, etc.)
 Say:
-> *"Jarvis, /model gemini-3.8-flash"*  
+> *"Jarvis, /model your-model"*
 > *"Computer, /plan create new authentication flow"*  
 > *"Agent, /goal finish all unit tests"*
 
