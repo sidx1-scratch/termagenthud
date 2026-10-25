@@ -2,7 +2,7 @@
 
 A high-tech, tactical fighter-jet and JARVIS-inspired Terminal HUD for any Terminal AI Agent (such as **Google Antigravity CLI**, **OpenAI Codex CLI**, **Claude Code**, or custom agents). 
 
-Featuring **Zero-Dependency Native WebSocket & HTTP servers**, **Open-Source Voice AI** (Whisper Tiny STT + Piper TTS) with ultra-low RAM usage (~140MB), and complete interactive terminal agent control.
+Featuring **Zero-Dependency Native WebSocket & HTTP servers**, **Open-Source Voice AI** (Whisper Tiny STT + Piper TTS) with ultra-low RAM usage (~140MB), and complete interactive terminal agent control across your local shell and browser UI.
 
 ![HUD Tactical Deck](https://raw.githubusercontent.com/sidx1-scratch/termagenthud/main/docs/hud-preview.png)
 
@@ -93,17 +93,17 @@ TermAgentHUD natively supports every terminal AI coder on the market:
 3. **Specifying a Custom Agent Binary or Wrapper**:
    - In the Web HUD, choose **`TARGET: Custom Shell Agent`**.
    - Or send an API request:
-     ```bash
-     curl -X POST http://localhost:3000/api/start-agent \
-       -H "Content-Type: application/json" \
-       -d '{"command": "openclaw", "args": ["--interactive"], "cwd": "/path/to/project"}'
-     ```
+      ```bash
+      curl -X POST http://localhost:3000/api/start-agent \
+        -H "Content-Type: application/json" \
+        -d '{"command": "openclaw", "args": ["--interactive"], "cwd": "/path/to/project"}'
+      ```
    - Alternatively, pass the agent command directly when starting:
-     ```bash
-     termagenthud --agent=openclaw
-     # or
-     termagenthud --agent="opencode --model deepseek-coder"
-     ```
+      ```bash
+      termagenthud --agent=openclaw
+      # or
+      termagenthud --agent="opencode --model deepseek-coder"
+      ```
 
 ### 5. Subagent Tracking
 Whenever the main agent spawns subagents (e.g. `invoke_subagent`, Research Subagents, background testers), they are detected and displayed as blips on the 360° tactical radar.
@@ -112,7 +112,7 @@ Whenever the main agent spawns subagents (e.g. `invoke_subagent`, Research Subag
 
 ## 📡 Model Context Protocol (MCP) Server Integration
 
-TermAgentHUD includes a first-class Model Context Protocol (MCP) server that any terminal AI agent (Google Antigravity CLI, Claude Code, Cursor, Codex CLI) can connect to for spoken alerts and tactical voice authorization.
+TermAgentHUD includes a first-class Model Context Protocol (MCP) server that any terminal AI agent (Google Antigravity CLI, Claude Code, Cursor, Codex CLI) can connect to for spoken alerts and tactical HUD telemetry.
 
 ### 1. Configuration for AI Agents
 
@@ -150,9 +150,9 @@ Once linked, your AI agent gains access to 3 tactical HUD tools:
 
 | MCP Tool Name | Description | Parameters |
 | --- | --- | --- |
-| `request_voice_approval` | Asks the user for vocal approval before executing a sensitive shell command or writing destructive file edits. Speaks the prompt aloud via Piper TTS, flashes the HUD red, and waits for a spoken *"Jarvis, approve"* or *"Computer, reject"*. | `command` (string), `explanation` (string), `timeoutSec` (number) |
-| `speak_hud_announcement` | Announces mission status, task completions, or errors through Piper voice synthesis while logging to the HUD stream. | `message` (string), `level` (`info` \| `warning` \| `critical` \| `success`) |
-| `update_hud_telemetry` | Streams real-time operational status (e.g., `ENGAGED`, `ANALYZING`, `IDLE`), current active tool, and progress % to the tactical HUD dials. | `status` (string), `activeTool` (string), `progress` (number) |
+| `request_voice_approval` | Asks the user for vocal approval before executing a sensitive shell command or writing destructive file edits. Speaks the prompt aloud via Piper TTS, flashes the HUD window, and waits for a `yes` / `no` voice confirmation. | `prompt` (string), `context` (optional string) |
+| `speak_hud_announcement` | Announces mission status, task completions, or errors through Piper voice synthesis while logging to the HUD stream. | `message` (string), `level` (`info` \| `warning` \| `error`) |
+| `update_hud_telemetry` | Streams real-time operational status (e.g., `ENGAGED`, `ANALYZING`, `IDLE`), current active tool, and progress % to the tactical HUD dials. | `status` (string), `active_tool` (string), `progress` (number) |
 
 ---
 
@@ -172,6 +172,39 @@ Run comprehensive zero-dependency unit tests:
 ```bash
 npm test
 ```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome if you want to help shape the future of AI agent control surfaces.
+
+This project is intentionally designed around a browser-first, local-first, tactical dashboard model: the agent stays on your machine, the HUD runs in the browser, and the terminal acts as a fallback or advanced mode instead of the only interface. We also want to support future remote access patterns such as browser/mobile monitoring and secure connection flows like Tailscale.
+
+### Areas where help is especially valuable
+- Browser HUD UX and responsive design
+- Agent telemetry and live status streams
+- Voice command UX and approval flows
+- MCP tool integrations with new agent types
+- Terminal fallback / ASCII mode improvements
+- Security and remote access patterns for mobile or LAN/WAN monitoring
+- Performance, startup reliability, and low-resource operation
+
+### Contribution guidelines
+1. Fork the repo and create a feature branch.
+2. Keep the project local-first by default, with optional remote access features behind explicit configuration.
+3. Prefer secure, minimal, and privacy-respecting designs over cloud-only assumptions.
+4. Validate changes with the project test suite (`npm test`) before opening a PR.
+5. Include a clear summary of what changed and why, especially for UI, voice, telemetry, or agent-integration updates.
+
+### Example future directions
+- Browser-first agent control dashboards for multiple agents at once
+- Mobile-friendly HUD views for monitoring and approvals from a phone
+- Secure remote access using Tailscale or similar VPN tooling
+- More advanced agent telemetry, event replay, and history views
+- Additional voice command presets and mission-control overlays
+
+If you have an idea for a new control layer, HUD feature, or agent integration, open an issue first so we can discuss the design before coding it.
 
 ---
 
