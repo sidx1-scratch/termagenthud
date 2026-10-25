@@ -1,39 +1,66 @@
 #!/usr/bin/env bash
 set -e
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENV_DIR="$DIR/.venv"
-MODELS_DIR="$DIR/models"
-
-echo "=== TermAgentHUD Voice Engine Installer ==="
-mkdir -p "$MODELS_DIR"
-
-if [ ! -d "$VENV_DIR" ]; then
-    echo "[1/4] Creating Python virtual environment..."
-    python3 -m venv "$VENV_DIR"
+# TermAgentHUD Voice Model Setup Script
+# Determines true user home (even if invoked via sudo)
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    [ -z "$USER_HOME" ] && USER_HOME="/home/$SUDO_USER"
+else
+    USER_HOME="${HOME:-$USERPROFILE}"
 fi
 
-echo "[2/4] Installing high-efficiency, low-RAM STT (faster-whisper) & TTS (piper-tts)..."
-"$VENV_DIR/bin/pip" install --upgrade pip
-# faster-whisper uses CTranslate2 (int8 quantization, ~150MB RAM vs standard PyTorch >1GB)
-"$VENV_DIR/bin/pip" install faster-whisper piper-tts sounddevice numpy scipy
+APP_DIR="$USER_HOME/.config/termagenthud"
+VENV_DIR="$APP_DIR/venv"
+MODELS_DIR="$APP_DIR/models"
 
-echo "[3/4] Pre-caching Whisper Tiny (int8 quantized)..."
-"$VENV_DIR/bin/python" -c "from faster_whisper import WhisperModel; WhisperModel('tiny.en', device='cpu', compute_type='int8')"
+mkdir -p "$MODELS_DIR"
 
-echo "[4/4] Downloading Piper Voice (en_US-lessac-low, ~28MB)..."
-# Using 'low' quality instead of medium: cuts model size from 65MB to ~28MB and halves ONNX RAM usage with crisp speech
+# Ensure non-root ownership if run via sudo
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    chown -R "$SUDO_USER:$SUDO_USER" "$APP_DIR" 2>/dev/null || true
+fi
+
+echo "[HUD-SETUP] Installing Python virtual environment in $VENV_DIR..."
+if [ ! -d "$VENV_DIR" ]; then
+    if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+        su - "$SUDO_USER" -c "python3 -m venv '$VENV_DIR'"
+    else
+        python3 -m venv "$VENV_DIR"
+    fi
+fi
+
+echo "[HUD-SETUP] Installing faster-whisper & piper-tts..."
+PIP_CMD="$VENV_DIR/bin/pip"
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    su - "$SUDO_USER" -c "'$PIP_CMD' install --upgrade pip -q && '$PIP_CMD' install faster-whisper piper-tts sounddevice numpy scipy -q"
+else
+    "$PIP_CMD" install --upgrade pip -q
+    "$PIP_CMD" install faster-whisper piper-tts sounddevice numpy scipy -q
+fi
+
+echo "[HUD-SETUP] Pre-caching Whisper Tiny (int8 quantized)..."
+PYTHON_CMD="$VENV_DIR/bin/python"
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    su - "$SUDO_USER" -c "'$PYTHON_CMD' -c \"from faster_whisper import WhisperModel; WhisperModel('tiny.en', device='cpu', compute_type='int8')\""
+else
+    "$PYTHON_CMD" -c "from faster_whisper import WhisperModel; WhisperModel('tiny.en', device='cpu', compute_type='int8')"
+fi
+
+echo "[HUD-SETUP] Downloading Piper voice model (lessac-low)..."
 PIPER_MODEL_URL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/low/en_US-lessac-low.onnx"
 PIPER_CONFIG_URL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/low/en_US-lessac-low.onnx.json"
 
 if [ ! -f "$MODELS_DIR/voice.onnx" ]; then
-    echo "Downloading voice.onnx..."
-    curl -L "$PIPER_MODEL_URL" -o "$MODELS_DIR/voice.onnx"
+    curl -L --progress-bar "$PIPER_MODEL_URL" -o "$MODELS_DIR/voice.onnx"
 fi
 
 if [ ! -f "$MODELS_DIR/voice.onnx.json" ]; then
-    echo "Downloading voice.onnx.json..."
-    curl -L "$PIPER_CONFIG_URL" -o "$MODELS_DIR/voice.onnx.json"
+    curl -L --progress-bar "$PIPER_CONFIG_URL" -o "$MODELS_DIR/voice.onnx.json"
 fi
 
-echo "=== Voice Engine Setup Complete! ==="
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    chown -R "$SUDO_USER:$SUDO_USER" "$APP_DIR" 2>/dev/null || true
+fi
+
+echo "[HUD-SETUP] Voice models ready at $APP_DIR!"

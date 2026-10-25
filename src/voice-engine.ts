@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
+import { getVenvPython, getPiperModelPath, getPiperConfigPath, getAppDataDir } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,9 +28,9 @@ export class VoiceEngine extends EventEmitter {
 
   constructor() {
     super();
-    this.venvPython = path.join(rootDir, '.venv', 'bin', 'python');
-    this.piperModel = path.join(rootDir, 'models', 'voice.onnx');
-    this.piperConfig = path.join(rootDir, 'models', 'voice.onnx.json');
+    this.venvPython = getVenvPython();
+    this.piperModel = getPiperModelPath();
+    this.piperConfig = getPiperConfigPath();
 
     this.checkAvailability();
   }
@@ -60,7 +61,7 @@ export class VoiceEngine extends EventEmitter {
 
     if (this.enabled) {
       // Piper TTS playback via aplay or paplay
-      const piperCmd = path.join(rootDir, '.venv', 'bin', 'piper');
+      const piperCmd = path.join(path.dirname(this.venvPython), 'piper');
       const player = fs.existsSync('/usr/bin/aplay') ? 'aplay -q' : (fs.existsSync('/usr/bin/paplay') ? 'paplay' : 'aplay');
 
       const proc = spawn('bash', ['-c', `echo "${text.replace(/"/g, '\\"')}" | "${piperCmd}" --model "${this.piperModel}" --config "${this.piperConfig}" --output-raw | ${player} -r 22050 -f S16_LE -t raw -c 1`]);

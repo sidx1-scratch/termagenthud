@@ -2,26 +2,27 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
+import { getVenvPython, getPiperModelPath, getAppDataDir } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const scriptPath = path.join(rootDir, 'scripts', 'install.sh');
+const scriptPath = path.join(rootDir, 'scripts', 'setup_voice.sh');
 
 export function autoInstallVoice(): boolean {
-  const venvPython = path.join(rootDir, '.venv', 'bin', 'python');
-  const piperModel = path.join(rootDir, 'models', 'voice.onnx');
+  const venvPython = getVenvPython();
+  const piperModel = getPiperModelPath();
 
   if (fs.existsSync(venvPython) && fs.existsSync(piperModel)) {
     return true;
   }
 
-  console.log('[HUD] Voice models or environment missing. Running automatic setup...');
+  console.log(`[HUD] Voice models missing in ${getAppDataDir()}. Installing in background...`);
   try {
-    execSync(`bash "${scriptPath}"`, { stdio: 'inherit', cwd: rootDir });
+    execSync(`bash "${scriptPath}"`, { stdio: 'inherit' });
     return true;
   } catch (err) {
-    console.warn('[HUD] Note: Automatic voice dependencies download requires network/python3-venv. Fallback mock voice enabled if offline.');
+    console.warn('[HUD] Note: Voice installation failed or was deferred. Running in visual/browser mode.');
     return false;
   }
 }
