@@ -1,63 +1,67 @@
-// Tactical Radar Canvas Renderer
+// Tactical Arc Reactor & Radar Core Canvas Renderer
 const radarCanvas = document.getElementById('radar-canvas');
 const radarCtx = radarCanvas.getContext('2d');
 let radarAngle = 0;
 
-function drawRadar() {
+function drawCore() {
   const width = radarCanvas.width;
   const height = radarCanvas.height;
   const cx = width / 2;
   const cy = height / 2;
-  const radius = cx - 10;
+  const maxRadius = cx - 12;
 
   radarCtx.clearRect(0, 0, width, height);
 
-  // Concentric Rings
-  radarCtx.strokeStyle = 'rgba(0, 243, 255, 0.25)';
-  radarCtx.lineWidth = 1;
-  [0.33, 0.66, 1].forEach((fraction) => {
+  // Concentric Tactical Circles
+  [0.25, 0.5, 0.75, 1].forEach((fraction, idx) => {
+    radarCtx.strokeStyle = idx === 3 ? 'rgba(0, 243, 255, 0.4)' : 'rgba(0, 243, 255, 0.15)';
+    radarCtx.lineWidth = 1;
     radarCtx.beginPath();
-    radarCtx.arc(cx, cy, radius * fraction, 0, Math.PI * 2);
+    radarCtx.arc(cx, cy, maxRadius * fraction, 0, Math.PI * 2);
     radarCtx.stroke();
   });
 
-  // Crosshairs
+  // Crosshairs with Tick Marks
+  radarCtx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
   radarCtx.beginPath();
-  radarCtx.moveTo(cx, 10);
-  radarCtx.lineTo(cx, height - 10);
-  radarCtx.moveTo(10, cy);
-  radarCtx.lineTo(width - 10, cy);
+  radarCtx.moveTo(cx, 12);
+  radarCtx.lineTo(cx, height - 12);
+  radarCtx.moveTo(12, cy);
+  radarCtx.lineTo(width - 12, cy);
   radarCtx.stroke();
 
-  // Sweeping Radar Line
+  // Sweeping Harmonic Beam
   radarAngle += 0.035;
-  const sweepX = cx + Math.cos(radarAngle) * radius;
-  const sweepY = cy + Math.sin(radarAngle) * radius;
+  const sweepX = cx + Math.cos(radarAngle) * maxRadius;
+  const sweepY = cy + Math.sin(radarAngle) * maxRadius;
 
-  const grad = radarCtx.createRadialGradient(cx, cy, 5, cx, cy, radius);
-  grad.addColorStop(0, 'rgba(0, 243, 255, 0.4)');
+  const grad = radarCtx.createRadialGradient(cx, cy, 10, cx, cy, maxRadius);
+  grad.addColorStop(0, 'rgba(0, 243, 255, 0.35)');
   grad.addColorStop(1, 'rgba(0, 243, 255, 0)');
 
   radarCtx.beginPath();
   radarCtx.moveTo(cx, cy);
-  radarCtx.arc(cx, cy, radius, radarAngle - 0.4, radarAngle);
+  radarCtx.arc(cx, cy, maxRadius, radarAngle - 0.45, radarAngle);
   radarCtx.closePath();
   radarCtx.fillStyle = grad;
   radarCtx.fill();
 
-  // Radar Blip (Antigravity CLI Agent)
-  const blipX = cx + Math.cos(1.2) * (radius * 0.65);
-  const blipY = cy + Math.sin(1.2) * (radius * 0.65);
-  radarCtx.fillStyle = '#ffb800';
+  // AI Agent Node Blip
+  const blipX = cx + Math.cos(2.4) * (maxRadius * 0.65);
+  const blipY = cy + Math.sin(2.4) * (maxRadius * 0.65);
+  radarCtx.fillStyle = '#00ff88';
+  radarCtx.shadowColor = '#00ff88';
+  radarCtx.shadowBlur = 8;
   radarCtx.beginPath();
   radarCtx.arc(blipX, blipY, 4, 0, Math.PI * 2);
   radarCtx.fill();
+  radarCtx.shadowBlur = 0;
 
-  requestAnimationFrame(drawRadar);
+  requestAnimationFrame(drawCore);
 }
-drawRadar();
+drawCore();
 
-// Audio Waveform Visualizer
+// Harmonic Audio Frequency Waveform
 const waveCanvas = document.getElementById('waveform-canvas');
 const waveCtx = waveCanvas.getContext('2d');
 let wavePhase = 0;
@@ -69,15 +73,18 @@ function drawWaveform() {
 
   waveCtx.lineWidth = 2;
   waveCtx.strokeStyle = '#00f3ff';
+  waveCtx.shadowColor = '#00f3ff';
+  waveCtx.shadowBlur = 4;
   waveCtx.beginPath();
 
-  wavePhase += 0.05;
+  wavePhase += 0.04;
   for (let x = 0; x < w; x++) {
-    const y = h / 2 + Math.sin(x * 0.04 + wavePhase) * 12 + Math.cos(x * 0.02 - wavePhase) * 6;
+    const y = h / 2 + Math.sin(x * 0.04 + wavePhase) * 10 + Math.cos(x * 0.02 - wavePhase) * 5;
     if (x === 0) waveCtx.moveTo(x, y);
     else waveCtx.lineTo(x, y);
   }
   waveCtx.stroke();
+  waveCtx.shadowBlur = 0;
   requestAnimationFrame(drawWaveform);
 }
 drawWaveform();
@@ -94,6 +101,9 @@ const commsStream = document.getElementById('comms-stream');
 const approvalBay = document.getElementById('approval-bay');
 const approvalMsg = document.getElementById('approval-msg');
 const approvalCmd = document.getElementById('approval-cmd');
+const teleStatus = document.getElementById('tele-status');
+const teleTool = document.getElementById('tele-tool');
+const teleCwd = document.getElementById('tele-cwd');
 const agentSelect = document.getElementById('agent-select');
 
 if (agentSelect) {
@@ -102,8 +112,6 @@ if (agentSelect) {
     appendLog(`[TARGET SWITCH] Agent set to: ${agentSelect.options[agentSelect.selectedIndex].text}`, 'agent');
   };
 }
-const teleTool = document.getElementById('tele-tool');
-const teleCwd = document.getElementById('tele-cwd');
 
 if (teleCwd) {
   teleCwd.onclick = () => {
@@ -117,8 +125,9 @@ if (teleCwd) {
 
 function appendLog(text, type = 'sys') {
   const line = document.createElement('div');
-  line.className = `log-line ${type}`;
-  line.innerText = text;
+  line.className = `stream-row ${type}`;
+  const now = new Date().toTimeString().split(' ')[0];
+  line.innerHTML = `<span class="timestamp">[${now}]</span> ${text}`;
   commsStream.appendChild(line);
   commsStream.scrollTop = commsStream.scrollHeight;
 }
@@ -129,7 +138,7 @@ function connectWs() {
   ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
-    appendLog('[WEBSOCKET] Tactical link established with TermAgentHUD server.', 'success');
+    appendLog('Neural bridge established with TermAgentHUD server.', 'success');
   };
 
   ws.onmessage = (event) => {
@@ -137,54 +146,57 @@ function connectWs() {
       const data = JSON.parse(event.data);
       handleMessage(data);
     } catch {
-      appendLog(`[RAW] ${event.data}`, 'sys');
+      appendLog(event.data, 'sys');
     }
   };
 
   ws.onclose = () => {
-    appendLog('[WEBSOCKET] Connection lost. Retrying in 2s...', 'warn');
+    appendLog('Connection lost. Reconnecting to local agent daemon in 2s...', 'warn');
     setTimeout(connectWs, 2000);
   };
 }
 
-let pendingApprovalId = null;
-
 function handleMessage(msg) {
   if (msg.type === 'APPROVAL_REQUEST') {
-    approvalBay.classList.remove('waiting');
+    approvalBay.classList.remove('standby');
     approvalBay.classList.add('active');
-    approvalMsg.innerText = `AUTHORIZATION REQUESTED: ${msg.explanation}`;
+    approvalMsg.innerText = `CONFIRMATION REQUIRED: ${msg.explanation || msg.command}`;
     approvalCmd.innerText = msg.command;
     appendLog(`[APPROVAL REQUEST] Command: ${msg.command}`, 'warn');
     playAlertTone();
-  } else if (msg.type === 'SPEAK') {
-    appendLog(`[PIPER TTS] "${msg.message}"`, 'voice');
-    speakBrowser(msg.message);
+  } else if (msg.type === 'AGENT_OUTPUT') {
+    appendLog(msg.data, 'agent');
+  } else if (msg.type === 'SUBAGENT_ACTIVITY') {
+    appendLog(`[SUBAGENT] ${msg.name}: ${msg.action}`, 'agent');
   } else if (msg.type === 'AGENT_STATUS') {
     if (msg.cwd && teleCwd) teleCwd.innerText = msg.cwd;
     if (msg.agent && agentSelect) agentSelect.value = msg.agent.id;
     if (msg.running) {
-      teleStatus.innerText = 'AGENT ENGAGED';
+      teleStatus.innerText = 'ENGAGED';
     }
+  } else if (msg.type === 'SPEAK') {
+    appendLog(`[JARVIS VOCAL] "${msg.message}"`, 'voice');
   } else if (msg.type === 'TELEMETRY') {
     if (msg.status) teleStatus.innerText = msg.status.toUpperCase();
     if (msg.activeTool) teleTool.innerText = msg.activeTool.toUpperCase();
     appendLog(`[TELEMETRY] Status: ${msg.status || 'ACTIVE'} | Tool: ${msg.activeTool || 'NONE'}`, 'agent');
+  } else if (msg.type === 'LOG') {
+    appendLog(msg.text, 'sys');
   }
 }
 
 function resolveApproval(approved) {
   approvalBay.classList.remove('active');
-  approvalBay.classList.add('waiting');
-  approvalCmd.innerText = 'NO PENDING COMMAND';
+  approvalBay.classList.add('standby');
+  approvalCmd.innerText = '// ALL SYSTEMS NOMINAL // WAITING FOR DIRECTIVE';
   
   if (approved) {
     approvalMsg.innerText = 'STATUS: AUTHORIZATION GRANTED.';
-    appendLog('[APPROVAL] User authorized command execution.', 'success');
+    appendLog('[APPROVAL] User authorized execution.', 'success');
     sendWs({ type: 'APPROVAL_RESPONSE', approved: true });
   } else {
     approvalMsg.innerText = 'STATUS: AUTHORIZATION DENIED.';
-    appendLog('[APPROVAL] User aborted command execution.', 'warn');
+    appendLog('[APPROVAL] User aborted execution.', 'warn');
     sendWs({ type: 'APPROVAL_RESPONSE', approved: false });
   }
 }
@@ -192,16 +204,6 @@ function resolveApproval(approved) {
 function sendWs(data) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(data));
-  }
-}
-
-// Browser Audio Synth Fallback / Echo
-function speakBrowser(text) {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
-    utterance.pitch = 0.95;
-    window.speechSynthesis.speak(utterance);
   }
 }
 
@@ -235,12 +237,12 @@ document.getElementById('btn-sim-approval').onclick = () => {
   handleMessage({
     type: 'APPROVAL_REQUEST',
     command: 'git push origin main --force',
-    explanation: 'Automated deployment sequence initiated by Antigravity CLI.',
+    explanation: 'Automated deployment sequence initiated by AI agent.',
   });
 };
 
 document.getElementById('btn-sim-voice').onclick = () => {
-  const msg = 'Commander, all tactical fighter-jet HUD systems are online and responsive.';
+  const msg = 'Commander, all tactical JARVIS HUD cybernetic modules are online and responsive.';
   handleMessage({ type: 'SPEAK', message: msg });
 };
 
@@ -252,10 +254,16 @@ document.getElementById('btn-clear').onclick = () => {
 document.getElementById('btn-send').onclick = () => {
   const input = document.getElementById('manual-cmd');
   if (input.value.trim()) {
-    appendLog(`[TACTICAL TRANSMISSION] ${input.value.trim()}`, 'sys');
+    appendLog(`[TRANSMIT] ${input.value.trim()}`, 'sys');
     sendWs({ type: 'TRANSMIT_COMMAND', command: input.value.trim() });
     input.value = '';
   }
 };
+
+document.getElementById('manual-cmd').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('btn-send').click();
+  }
+});
 
 connectWs();
