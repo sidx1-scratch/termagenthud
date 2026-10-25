@@ -1,9 +1,9 @@
-import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
-import { getVenvPython, getPiperModelPath, getPiperConfigPath, getAppDataDir } from './paths.js';
+import { getPiperModelPath, getPiperConfigPath } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,24 +21,20 @@ export class VoiceEngine extends EventEmitter {
   private listenerProcess: ChildProcess | null = null;
   private ttsQueue: string[] = [];
   private isSpeaking = false;
-  private venvPython: string;
   private piperModel: string;
   private piperConfig: string;
   public enabled = false;
 
   constructor() {
     super();
-    this.venvPython = getVenvPython();
     this.piperModel = getPiperModelPath();
     this.piperConfig = getPiperConfigPath();
-
     this.checkAvailability();
   }
 
   public checkAvailability(): boolean {
-    const hasVenv = fs.existsSync(this.venvPython);
     const hasModel = fs.existsSync(this.piperModel);
-    this.enabled = hasVenv && hasModel;
+    this.enabled = hasModel;
     return this.enabled;
   }
 
@@ -59,12 +55,12 @@ export class VoiceEngine extends EventEmitter {
     const text = this.ttsQueue.shift()!;
     this.emit('speaking', text);
 
-    if (this.enabled) {
-      // Piper TTS playback via aplay or paplay
-      const piperCmd = path.join(path.dirname(this.venvPython), 'piper');
+    const hasPiper = fs.existsSync(this.piperModel);
+    if (hasPiper) {
       const player = fs.existsSync('/usr/bin/aplay') ? 'aplay -q' : (fs.existsSync('/usr/bin/paplay') ? 'paplay' : 'aplay');
+      const piperCmd = `echo "${text.replace(/"/g, '\\"')}" | python3 -m piper --model "${this.piperModel}" --config "${this.piperConfig}" --output-raw | ${player} -r 16000 -f S16_LE -t raw -c 1`;
 
-      const proc = spawn('bash', ['-c', `echo "${text.replace(/"/g, '\\"')}" | "${piperCmd}" --model "${this.piperModel}" --config "${this.piperConfig}" --output-raw | ${player} -r 22050 -f S16_LE -t raw -c 1`]);
+      const proc = spawn('bash', ['-c', piperCmd]);
 
       proc.on('close', () => {
         this.isSpeaking = false;
@@ -80,28 +76,20 @@ export class VoiceEngine extends EventEmitter {
         if (onComplete) onComplete();
       });
     } else {
-      // Fallback: simulated speech delay so the HUD animation and HUD log show up
       setTimeout(() => {
         this.isSpeaking = false;
         this.emit('idle');
         this.processQueue();
         if (onComplete) onComplete();
-      }, Math.min(2500, Math.max(800, text.length * 45)));
+      }, 1000);
     }
   }
 
   public startListening() {
-    if (!this.enabled) {
-      this.emit('status', 'Voice offline (models not yet downloaded). Ready in manual/test mode.');
-      return;
-    }
-
     const listenerScript = path.join(rootDir, 'scripts', 'stt_listener.py');
-    if (!fs.existsSync(listenerScript)) {
-      return;
-    }
+    if (!fs.existsSync(listenerScript)) return;
 
-    this.listenerProcess = spawn(this.venvPython, [listenerScript]);
+    this.listenerProcess = spawn('python3', [listenerScript]);
 
     this.listenerProcess.stdout?.on('data', (data) => {
       const lines = data.toString().split('\n');
@@ -114,25 +102,20 @@ export class VoiceEngine extends EventEmitter {
           } else if (parsed.type === 'status') {
             this.emit('status', parsed.message);
           }
-        } catch {
-          // Non-json log
-        }
+        } catch {}
       }
     });
 
-    this.listenerProcess.stderr?.on('data', (data) => {
-      // Debug / log if needed
-    });
+    this.listenerProcess.stderr?.on('data', (data) => {});
   }
 
   public handleTranscript(rawText: string) {
     const text = rawText.trim();
     const lower = text.toLowerCase();
-    
-    // Check for wake words: "computer", "jarvis", "agent"
+
     const wakeWords = ['jarvis', 'computer', 'agent'];
     let detectedWakeWord: string | undefined;
-    
+
     for (const ww of wakeWords) {
       if (lower.startsWith(ww) || lower.includes(ww)) {
         detectedWakeWord = ww;
@@ -151,12 +134,11 @@ export class VoiceEngine extends EventEmitter {
       isWakeWord: !!detectedWakeWord,
       wakeWord: detectedWakeWord,
       command: command || text,
-      raw: text
+      raw: text,
     };
 
     this.emit('transcript', event);
 
-    // If wake word is present or direct approval words
     if (detectedWakeWord) {
       this.emit('command', event);
     }

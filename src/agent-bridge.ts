@@ -1,25 +1,26 @@
-import { spawn, ChildProcess, execSync } from 'child_process';
+import * as path from 'path';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 
-export interface ApprovalPromptEvent {
-  promptText: string;
-  rawLine: string;
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
+const ptyBridgeScript = path.join(rootDir, 'scripts', 'pty_bridge.py');
 
 export interface SupportedAgent {
   id: string;
   name: string;
   binaries: string[];
-  defaultArgs?: string[];
   description: string;
 }
 
-// Built-in registry of every major AI CLI Coder
 export const KNOWN_AGENTS: SupportedAgent[] = [
   {
     id: 'antigravity',
     name: 'Google Antigravity CLI',
-    binaries: ['agy', 'antigravity'],
+    binaries: ['agy', 'antigravity', '/home/sidx1/.local/bin/agy'],
     description: 'Google Antigravity autonomous agent CLI',
   },
   {
@@ -53,24 +54,6 @@ export const KNOWN_AGENTS: SupportedAgent[] = [
     description: 'Terminal AI pair programming with git sync',
   },
   {
-    id: 'cursor-cli',
-    name: 'Cursor CLI',
-    binaries: ['cursor-agent', 'cursor'],
-    description: 'Cursor agent command line bridge',
-  },
-  {
-    id: 'gemini-cli',
-    name: 'Gemini CLI',
-    binaries: ['gemini', 'gemini-cli'],
-    description: 'Google Gemini CLI developer assistant',
-  },
-  {
-    id: 'copilot',
-    name: 'GitHub Copilot CLI',
-    binaries: ['copilot', 'gh copilot'],
-    description: 'GitHub Copilot in the CLI',
-  },
-  {
     id: 'custom',
     name: 'Custom Shell / Terminal Agent',
     binaries: ['bash', 'sh'],
@@ -79,11 +62,11 @@ export const KNOWN_AGENTS: SupportedAgent[] = [
 ];
 
 export class AgentSessionBridge extends EventEmitter {
-  private child: ChildProcess | null = null;
+  private ptyProcess: ChildProcess | null = null;
   private buffer = '';
-  private currentTool: string = 'IDLE';
   private workingDir: string = process.cwd();
   private activeAgent: SupportedAgent = KNOWN_AGENTS[0];
+  private currentPid: number | undefined;
 
   constructor(workingDir?: string) {
     super();
@@ -94,14 +77,10 @@ export class AgentSessionBridge extends EventEmitter {
   }
 
   public detectInstalledAgent(): SupportedAgent {
-    for (const agent of KNOWN_AGENTS) {
-      for (const bin of agent.binaries) {
-        try {
-          execSync(`which ${bin.split(' ')[0]} 2>/dev/null`);
-          this.activeAgent = agent;
-          return agent;
-        } catch {}
-      }
+    // Check if agy exists in PATH or user local bin
+    if (fs.existsSync('/home/sidx1/.local/bin/agy')) {
+      this.activeAgent = KNOWN_AGENTS[0];
+      return this.activeAgent;
     }
     this.activeAgent = KNOWN_AGENTS[0];
     return this.activeAgent;
@@ -128,73 +107,101 @@ export class AgentSessionBridge extends EventEmitter {
   }
 
   public isRunning(): boolean {
-    return this.child !== null && !this.child.killed;
+    return this.ptyProcess !== null && !this.ptyProcess.killed;
   }
 
   public getPid(): number | undefined {
-    return this.child?.pid;
+    return this.currentPid;
   }
 
   public startAgent(command?: string, args: string[] = [], cwd?: string) {
-    if (this.child) {
-      try { this.child.kill(); } catch {}
+    if (this.ptyProcess) {
+      try {
+        this.writePtyAction({ action: 'kill' });
+        this.ptyProcess.kill();
+      } catch {}
     }
 
     const runDir = cwd || this.workingDir || process.cwd();
-    const cmdToRun = command || this.activeAgent.binaries[0];
+    let targetBin = command || this.activeAgent.binaries[0];
 
-    // Spawn agent process in target project directory with full interactive pipe control
-    this.child = spawn(cmdToRun, args, {
+    // Resolve full path if available
+    if (targetBin === 'agy' && fs.existsSync('/home/sidx1/.local/bin/agy')) {
+      targetBin = '/home/sidx1/.local/bin/agy';
+    }
+
+    const fullCmd = [targetBin, ...args];
+
+    // Spawn via Python pty_bridge to allocate a real pseudo-terminal
+    this.ptyProcess = spawn('python3', [ptyBridgeScript, ...fullCmd], {
       cwd: runDir,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, FORCE_COLOR: '1' },
-      shell: true,
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        FORCE_COLOR: '1',
+      },
     });
 
-    this.child.stdout?.on('data', (data) => {
-      const text = data.toString('utf8');
-      this.handleOutput(text);
+    this.ptyProcess.stdout?.on('data', (data) => {
+      const lines = data.toString('utf8').split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.type === 'started') {
+            this.currentPid = parsed.pid;
+            this.emit('started', { command: parsed.command, pid: parsed.pid, agent: this.activeAgent });
+          } else if (parsed.type === 'output') {
+            this.handleOutput(parsed.data);
+          } else if (parsed.type === 'exit') {
+            this.emit('exit', parsed.code);
+            this.ptyProcess = null;
+          }
+        } catch {
+          this.handleOutput(line + '\n');
+        }
+      }
     });
 
-    this.child.stderr?.on('data', (data) => {
-      const text = data.toString('utf8');
-      this.handleOutput(text);
+    this.ptyProcess.stderr?.on('data', (data) => {
+      this.handleOutput(data.toString('utf8'));
     });
 
-    this.child.on('exit', (code) => {
+    this.ptyProcess.on('exit', (code) => {
       this.emit('exit', code);
-      this.child = null;
+      this.ptyProcess = null;
     });
+  }
 
-    this.child.on('error', (err) => {
-      this.emit('error', err);
-    });
-
-    this.emit('started', { command: cmdToRun, pid: this.child.pid, agent: this.activeAgent });
+  private writePtyAction(payload: any) {
+    if (this.ptyProcess && this.ptyProcess.stdin && !this.ptyProcess.stdin.destroyed) {
+      this.ptyProcess.stdin.write(JSON.stringify(payload) + '\n');
+    }
   }
 
   public writeInput(input: string) {
-    if (!this.child || !this.child.stdin || this.child.stdin.destroyed) {
-      // Auto-launch current agent with initial prompt
+    if (!this.isRunning()) {
+      // Auto-launch the agent with the provided task
       this.startAgent(this.activeAgent.binaries[0], [input]);
       return;
     }
 
     const cleanInput = input.endsWith('\n') ? input : input + '\n';
-    this.child.stdin.write(cleanInput);
+    this.writePtyAction({ action: 'write', data: cleanInput });
   }
 
   public sendApproval(approved: boolean) {
-    if (!this.child || !this.child.stdin) return;
+    if (!this.isRunning()) return;
     const key = approved ? 'y\n' : 'n\n';
-    this.child.stdin.write(key);
+    this.writePtyAction({ action: 'write', data: key });
   }
 
   private handleOutput(chunk: string) {
     this.emit('output', chunk);
     this.buffer += chunk;
 
-    // Universal confirmation detector across all AI terminal agents
+    // Check for interactive confirmations
     const confirmPatterns = [
       /\[y\/n\]/i,
       /\(y\/n\)/i,
@@ -206,7 +213,6 @@ export class AgentSessionBridge extends EventEmitter {
       /allow execution\?/i,
       /apply this change\?/i,
       /run this command\?/i,
-      /do you want to execute/i,
     ];
 
     const lines = chunk.split('\n');
@@ -214,38 +220,27 @@ export class AgentSessionBridge extends EventEmitter {
       for (const pattern of confirmPatterns) {
         if (pattern.test(line)) {
           this.emit('approval_required', {
-            promptText: line.trim().replace(/\x1b\[[0-9;]*m/g, ''), // Strip ANSI
+            promptText: line.trim().replace(/\x1b\[[0-9;]*m/g, ''),
             rawLine: line,
           });
           break;
         }
       }
 
-      // Universal Subagent detector
-      if (
-        line.includes('invoke_subagent') ||
-        line.includes('Subagent') ||
-        line.includes('Subtask') ||
-        line.includes('worker') ||
-        line.includes('spawn agent')
-      ) {
+      if (line.includes('invoke_subagent') || line.includes('Subagent') || line.includes('Subtask')) {
         this.emit('subagent', {
           name: this.activeAgent.name,
           action: line.trim().replace(/\x1b\[[0-9;]*m/g, ''),
         });
       }
-
-      // Tool Call detector
-      if (line.includes('call:') || line.includes('Tool:') || line.includes('Action:')) {
-        this.emit('tool_call', line.trim());
-      }
     }
   }
 
   public kill() {
-    if (this.child) {
-      this.child.kill();
-      this.child = null;
+    if (this.ptyProcess) {
+      this.writePtyAction({ action: 'kill' });
+      this.ptyProcess.kill();
+      this.ptyProcess = null;
     }
   }
 }
